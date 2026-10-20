@@ -9,8 +9,8 @@
   "tags": [],
   "project": "",
   "readDate": "2026-10-20",
-  "status": "reading",
-  "doneAt": "",
+  "status": "done",
+  "doneAt": "2026-10-20",
   "why": "如何用一个小模型 提升运行效率",
   "marks": [
     {
@@ -127,8 +127,11 @@
   "links": [],
   "linkNote": "",
   "notes": "没什么",
-  "srs": null,
+  "srs": {
+    "level": 0,
+    "due": "2026-10-21"
+  },
   "reviews": [],
   "createdAt": "2026-10-20T16:50:48.666Z",
-  "updatedAt": "2026-10-20T16:50:48.666Z"
+  "updatedAt": "2026-10-20T16:51:42.494Z"
 }
