@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "20261019-bert-demo",
+  "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+  "authors": "Devlin, Chang, Lee, Toutanova",
+  "year": 2019,
+  "venue": "NAACL",
+  "link": "arXiv:1810.04805",
+  "tags": ["示例", "NLP", "预训练"],
+  "project": "",
+  "readDate": "2026-10-19",
+  "status": "done",
+  "doneAt": "2026-10-19",
+  "why": "这是一张示例卡片，看完就可以删除（编辑 → 删除）。想弄懂：为什么「先预训练再微调」比为每个任务从头训练好？",
+  "marks": [
+    { "type": "!", "page": "1", "text": "双向：同时看左右两边的上下文" },
+    { "type": "?", "page": "4", "text": "为什么只遮 15% 的词？遮多了会怎样" },
+    { "type": "!", "page": "4", "text": "遮住的词 80% 换 [MASK]，10% 换随机词，10% 不变" },
+    { "type": "★", "page": "5", "text": "下游任务只加一层输出，整体微调" },
+    { "type": "×", "page": "5", "text": "下一句预测（NSP）的作用后来被 RoBERTa 质疑" },
+    { "type": "★", "page": "8", "text": "消融实验的写法：每次去掉一个部件看掉多少" }
+  ],
+  "oneLine": "用「遮住词再猜」的双向 Transformer 预训练，解决了预训练语言模型只能单向看上下文的问题，结果在 GLUE 等 11 个任务上全面刷新纪录（GLUE 平均比 GPT 高约 7 个点）。",
+  "pain": "- 之前的预训练语言模型（GPT、ELMo）本质上是**单向**的：预测下一个词时只能看左边。\n- 很多理解类任务（问答、推理）需要同时看左右两边的上下文，单向模型天生吃亏。\n- 直接做双向语言模型不行：每个词都能「看到自己」，任务就变得没意义。",
+  "idea": "1. **遮住再猜（Masked LM）**：随机遮住 15% 的词，让模型用左右两边的上下文去猜被遮住的词。这样就能真正双向。\n2. **下一句预测（NSP）**：给两句话，判断第二句是不是第一句的下文，让模型学到句子之间的关系。\n3. **预训练 + 微调**：大语料上预训练一次，下游任务只加一层输出，整个模型一起微调。\n\n输入 = 词向量 + 段落向量 + 位置向量，开头放一个 `[CLS]`，它的输出拿来做分类。",
+  "proof": {
+    "datasets": "GLUE（8 个任务）、SQuAD v1.1 / v2.0、SWAG",
+    "baselines": "OpenAI GPT、ELMo、各任务之前的最好结果",
+    "numbers": "GLUE 平均 80.5（GPT 72.8）；SQuAD v1.1 F1 93.2；去掉 NSP 或改成单向都会明显掉分"
+  },
+  "doubts": "- ? p.4 为什么只遮 15% 的词？遮多了会怎样\n- × p.5 下一句预测（NSP）的作用后来被 RoBERTa 质疑\n- 预训练时有 [MASK]、微调时没有，这个不一致到底影响多大？",
+  "relevance": "- ★ p.5 下游任务只加一层输出，整体微调\n- ★ p.8 消融实验的写法：每次去掉一个部件看掉多少\n- 我做文本分类时可以直接拿 BERT 做基线：取 `[CLS]` 的输出接一层分类器。",
+  "links": [],
+  "linkNote": "以后读到 GPT、RoBERTa 时勾上关联：GPT 是单向的「猜下一个词」，BERT 是双向的「猜被遮住的词」。",
+  "notes": "Masked LM 的目标可以写成：\n\n$$\\mathcal{L} = -\\sum_{i \\in M} \\log p(x_i \\mid x_{\\setminus M})$$\n\n其中 $M$ 是被遮住的位置。\n\n> 这是一张示例卡片：可以点「回忆模式」试试先回想再揭晓，或者去「回顾」页走一遍。看完点「编辑 → 删除」即可。",
+  "srs": { "level": 0, "due": "2026-10-20" },
+  "reviews": [],
+  "createdAt": "2026-10-20T00:00:00.000Z",
+  "updatedAt": "2026-10-20T00:00:00.000Z"
+}

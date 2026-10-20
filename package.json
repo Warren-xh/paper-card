@@ -1,0 +1,13 @@
+{
+  "name": "paper-card",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "mock": "node scripts/serve.mjs --mock",
+    "reindex": "node scripts/reindex.mjs",
+    "test": "node --test"
+  }
+}
