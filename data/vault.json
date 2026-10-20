@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "repo": "warren-xh/paper-card",
+  "algorithm": "AES-256-GCM",
+  "kdf": "PBKDF2-SHA256",
+  "iterations": 600000,
+  "salt": "xUk7mf/Ccq+bFdNG2Tr+UQ==",
+  "iv": "RotEnEFSznWmGtTM",
+  "ciphertext": "nTZGDw91gVnSO7OGcrOEwiT2vF7+PaeXAtQx8LtSD8RTk2jfJ7lfQrtO+uZEMzQgJ/yk6HXcKXo8EtvZq4b6DsPWTuXBdD6H+xa9QFCGkNr+6gxui7zPFPLVO/TzMmc1WifvXboD20Vb+rMz2bVu8Nu5IOdM8of1W09yNIJl/VsG5mJEznDkKpIXD2IdNgO2EowvsbRsaQ==",
+  "updatedAt": "2026-10-20T15:23:53.690Z"
+}
