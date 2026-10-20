@@ -171,6 +171,7 @@ select.inline { border: 1px solid var(--rule); background: var(--page); border-r
 .sec-label .num, .esec h3 .num { color: var(--margin); font-family: var(--serif); font-size: 18px; }
 .sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
 .sec-grid .wide { grid-column: 1 / -1; }
+.sec-grid:empty { display: none; }
 @media (max-width: 640px) { .sec-grid { grid-template-columns: 1fr; } }
 .sec { position: relative; border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 16px 14px; background-image: repeating-linear-gradient(transparent 0 27px, var(--line) 27px 28px); background-position: 0 38px; min-width: 0; }
 .sec-body { min-width: 0; }
@@ -274,27 +275,68 @@ button.mark-sym { cursor: pointer; }
 .prompts button:hover { border-style: solid; color: var(--pen); border-color: var(--pen); }
 .proof-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 640px) { .proof-grid { grid-template-columns: 1fr; } }
-.md-tools { display: flex; gap: 6px; margin-top: 6px; }
+.md-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
 
 .mark-input { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); }
-.mark-types { display: flex; flex-wrap: wrap; gap: 6px; }
-.mark-types button { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--rule); background: var(--page); border-radius: 999px; padding: 3px 12px 3px 4px; cursor: pointer; font-size: 14px; color: var(--ink-2); }
-.mark-types button b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid currentColor; font-size: 13px; }
-.mark-types button.t0 b { color: var(--m0); } .mark-types button.t1 b { color: var(--m1); } .mark-types button.t2 b { color: var(--m2); } .mark-types button.t3 b { color: var(--m3); }
-.mark-types button[aria-checked="true"] { border-color: currentColor; color: var(--ink); font-weight: 600; }
-.mark-types button.t0[aria-checked="true"] { border-color: var(--m0); } .mark-types button.t1[aria-checked="true"] { border-color: var(--m1); }
-.mark-types button.t2[aria-checked="true"] { border-color: var(--m2); } .mark-types button.t3[aria-checked="true"] { border-color: var(--m3); }
+.mark-types { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.mark-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.mark-kinds button { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--rule); background: var(--page); border-radius: 999px; padding: 3px 12px 3px 4px; cursor: pointer; font-size: 14px; color: var(--ink-2); }
+.mark-kinds button b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid currentColor; font-size: 13px; }
+.mark-kinds button.t0 b { color: var(--m0); } .mark-kinds button.t1 b { color: var(--m1); } .mark-kinds button.t2 b { color: var(--m2); } .mark-kinds button.t3 b { color: var(--m3); }
+.mark-kinds button[aria-checked="true"] { border-color: currentColor; color: var(--ink); font-weight: 600; }
+.mark-kinds button.t0[aria-checked="true"] { border-color: var(--m0); } .mark-kinds button.t1[aria-checked="true"] { border-color: var(--m1); }
+.mark-kinds button.t2[aria-checked="true"] { border-color: var(--m2); } .mark-kinds button.t3[aria-checked="true"] { border-color: var(--m3); }
+.fmt-pair { display: flex; gap: 4px; }
+.fmt { width: 32px; height: 30px; border: 1px solid var(--rule); background: var(--page); border-radius: var(--radius); cursor: pointer; color: var(--ink-2); font-family: var(--serif); font-size: 15px; padding: 0; }
+.fmt:hover { border-color: var(--pencil); color: var(--ink); }
+.page-step { display: flex; flex: none; }
+.page-step .step { width: 30px; border: 1px solid var(--rule); background: var(--page); color: var(--ink-2); cursor: pointer; font-size: 16px; padding: 0; }
+.page-step .step:first-child { border-radius: var(--radius) 0 0 var(--radius); border-right: 0; }
+.page-step .step:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-left: 0; }
+.page-step .step:hover { color: var(--pen); background: var(--pen-soft); }
+.page-step .input.page { width: 46px; border-radius: 0; }
 .mark-line { display: flex; gap: 6px; }
-.mark-line .input:not(.page) { flex: 1; }
+.mark-line > .input { flex: 1; min-width: 0; }
 .input.page { width: 64px; flex: none; text-align: center; padding-left: 4px; padding-right: 4px; }
 .marks-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
 .marks-list li { display: flex; gap: 6px; align-items: center; }
 .marks-list .input { padding: 5px 8px; font-size: 15px; }
 .marks-list .input:not(.page) { flex: 1; }
 .marks-list .input.page { width: 52px; }
-@media (max-width: 440px) { .marks-list .input.page { width: 40px; } .marks-list li { gap: 4px; } .marks-list .x { width: 26px; } }
-.link-pick { display: grid; gap: 2px; max-height: 260px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius); padding: 6px 10px; }
-.link-pick label { padding: 4px 0; }
+@media (max-width: 440px) {
+  .marks-list .input.page { width: 40px; } .marks-list li { gap: 4px; } .marks-list .x { width: 26px; }
+  .mark-line .btn { padding: 8px 10px; }
+  .page-step .step { width: 26px; } .page-step .input.page { width: 38px; }
+}
+.solve-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 10px; }
+.solve-list li:not(.muted) { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); }
+.solve-list .q, .solve-view .q { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.solve-list .page, .solve-view .page { color: var(--pencil); font-size: 13px; flex: none; }
+.solve-list .input { padding: 6px 9px; font-size: 15px; }
+#solveCount { margin: 0; color: var(--ink-2); }
+.solve-view { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.solve-view .a { margin-left: 34px; padding-left: 10px; border-left: 2px solid var(--ok); color: var(--ink); }
+.solved-tick { color: var(--ok); font-weight: 700; }
+.pdf-field { margin-top: 16px; display: grid; gap: 6px; }
+.pdf-field .hint { margin: 0; }
+.pdf-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+.pdf-file { font-size: 15px; padding: 4px 10px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.pdf-file::before { content: "PDF"; font-size: 11px; font-weight: 700; color: var(--margin); margin-right: 6px; }
+.pdf-line { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 12px 0 0; }
+.pdf-tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--margin); color: var(--margin); line-height: 1.5; }
+.link-chosen { display: flex; flex-wrap: wrap; gap: 6px; }
+.link-chosen:not(:empty) { margin-bottom: 8px; }
+.link-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 2px 4px 2px 10px; border-radius: 999px; background: var(--pen-soft); border: 1px solid color-mix(in srgb, var(--pen) 35%, var(--rule)); font-size: 14px; }
+.link-chip { overflow: hidden; }
+.unlink { border: 0; background: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; color: var(--pencil); font-size: 16px; line-height: 1; flex: none; }
+.unlink:hover { color: var(--warn); }
+.link-results { display: grid; gap: 4px; margin-top: 6px; }
+.link-results:empty { display: none; }
+.link-results p { margin: 0; }
+.link-result { display: grid; gap: 2px; text-align: left; border: 1px solid var(--rule); background: var(--page); border-radius: var(--radius); padding: 6px 10px; cursor: pointer; min-width: 0; }
+.link-result:hover { border-color: var(--pen); background: var(--pen-soft); }
+.link-result b { font-weight: 600; font-size: 14.5px; }
+.link-result span { font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .check-row { display: flex; gap: 8px; align-items: center; }
 .check-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--pen); flex: none; }
 .x { border: 0; background: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; color: var(--pencil); font-size: 18px; line-height: 1; flex: none; }

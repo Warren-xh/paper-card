@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const port = Number(process.env.PORT) || 4180;
 const mock = process.argv.includes("--mock");
-const types = { ".html": "text/html", ".mjs": "text/javascript", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png", ".md": "text/markdown" };
+const types = { ".html": "text/html", ".mjs": "text/javascript", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png", ".md": "text/markdown", ".pdf": "application/pdf" };
 
 /* ---------- in-memory git used by --mock ---------- */
 const objects = new Map(); // sha → { type, ... }
@@ -122,8 +122,9 @@ http
     const rel = normalize(path).replace(/^\/+/, "");
     if (rel.startsWith("..")) { res.writeHead(403); return res.end(); }
     try {
-      const data = (mock && (rel.startsWith("data/") || rel.startsWith("uploads/")) && mockStatic(rel)) || (await readFile(join(root, rel)));
-      res.writeHead(200, { "Content-Type": (types[extname(rel)] || "application/octet-stream") + "; charset=utf-8", "Cache-Control": "no-store" });
+      const data = (mock && (rel.startsWith("data/") || rel.startsWith("uploads/") || rel.startsWith("papers/")) && mockStatic(rel)) || (await readFile(join(root, rel)));
+      const type = types[extname(rel)] || "application/octet-stream";
+      res.writeHead(200, { "Content-Type": type + (type.startsWith("text/") || type.endsWith("json") ? "; charset=utf-8" : ""), "Cache-Control": "no-store" });
       res.end(data);
     } catch {
       res.writeHead(404, { "Content-Type": "text/plain" });

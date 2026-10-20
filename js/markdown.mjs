@@ -202,6 +202,11 @@ export function renderMarkdown(src, opts = {}) {
   return blocks(src, opts);
 }
 
+// One line of inline markup (bold, italic, code, math, links) without a wrapping <p>.
+export function renderInline(src, opts = {}) {
+  return inline(String(src || ""), opts);
+}
+
 export function hasMath(src) {
   return /\$[^$\n]+\$/.test(String(src || ""));
 }

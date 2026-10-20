@@ -48,7 +48,7 @@ export class GitHubClient {
     this.#token = token || "";
   }
 
-  async api(path, { method = "GET", body, auth = true } = {}) {
+  async api(path, { method = "GET", body, auth = true, timeout = 30000 } = {}) {
     const headers = { Accept: "application/vnd.github+json" };
     if (auth && this.#token) {
       headers.Authorization = "Bearer " + this.#token;
@@ -61,7 +61,7 @@ export class GitHubClient {
         method,
         headers,
         cache: "no-store",
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(timeout),
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
     } catch (error) {
@@ -142,9 +142,11 @@ export class GitHubClient {
       if (file.remove) {
         tree.push({ path: file.path, mode: "100644", type: "blob", sha: null });
       } else if (file.base64 != null) {
+        // Large files (paper PDFs) get more time to upload.
         const blob = await this.api(this.repoPath("/git/blobs"), {
           method: "POST",
           body: { content: file.base64, encoding: "base64" },
+          timeout: 30000 + Math.ceil(file.base64.length / 20),
         });
         tree.push({ path: file.path, mode: "100644", type: "blob", sha: blob.sha });
       } else {

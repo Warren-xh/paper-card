@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import * as M from "../js/model.mjs";
-import { renderMarkdown } from "../js/markdown.mjs";
+import { renderMarkdown, renderInline } from "../js/markdown.mjs";
 import { sealToken, openVault, passwordProblem } from "../js/vault.mjs";
 import { GitHubClient, utf8ToBase64, base64ToUtf8 } from "../js/github.mjs";
 
@@ -25,7 +25,9 @@ test("normalizeCard cleans input", () => {
     link: "javascript:alert(1)",
     tags: "#NLP, 预训练，nlp",
     status: "weird",
-    marks: [{ type: "?", page: 4, text: " 为什么 15% " }, { type: "bogus", text: "x" }, { type: "!", text: "" }],
+    marks: [{ type: "?", page: 4, text: " 为什么 15% " }, { type: "bogus", text: "x" }, { type: "!", text: "" }, { type: "!", page: "9" }],
+    pdf: "papers/20261020-bert-ab12.pdf",
+    pdfName: "bert.pdf",
     links: [ID, "20261001-gpt-aaaa", "bad id"],
   });
   assert.equal(c.title, "BERT");
@@ -33,7 +35,11 @@ test("normalizeCard cleans input", () => {
   assert.equal(c.link, "");
   assert.deepEqual(c.tags, ["NLP", "预训练"]);
   assert.equal(c.status, "reading");
-  assert.deepEqual(c.marks, [{ type: "?", page: "4", text: "为什么 15%" }, { type: "!", page: "", text: "x" }]);
+  assert.deepEqual(c.marks, [{ type: "?", page: "4", text: "为什么 15%", answer: "" }, { type: "!", page: "", text: "x", answer: "" }]);
+  assert.equal(c.pdf, "papers/20261020-bert-ab12.pdf");
+  assert.equal(c.pdfName, "bert.pdf");
+  for (const bad of ["../index.html", "papers/../data/vault.json", "papers/a.exe", "https://x.com/a.pdf"]) assert.equal(card({ pdf: bad }).pdf, "", bad);
+  assert.equal(M.pdfPath(ID), "papers/20261020-bert-ab12.pdf");
   assert.deepEqual(c.links, ["20261001-gpt-aaaa"]);
   assert.equal(card({ link: "1810.04805" }).link, "arXiv:1810.04805");
   assert.equal(M.paperHref("arXiv:1810.04805"), "https://arxiv.org/abs/1810.04805");
@@ -47,6 +53,23 @@ test("progress counts the seven parts", () => {
   assert.equal(M.progressText(c), "卡片 4/7，还差 ②⑤⑥");
   const full = card({ oneLine: "a", pain: "b", idea: "c", proof: { datasets: "d" }, doubts: "e", relevance: "f", links: ["20261001-gpt-aaaa"] });
   assert.equal(M.progressText(full), "卡片 7/7，写完了");
+});
+
+test("first-pass answers resolve questions", () => {
+  const c = card({
+    marks: [
+      { type: "?", page: "3", text: "CLS 干什么", answer: "做分类" },
+      { type: "?", page: "4", text: "为什么 15%" },
+      { type: "×", text: "NSP 没用", answer: "ignored for ×" },
+    ],
+    solved: "查了 WordPiece",
+  });
+  assert.deepEqual(M.openQuestions(c).map((m) => m.text), ["为什么 15%"]);
+  assert.equal(M.summarize(c).questions, 1);
+  assert.deepEqual(M.marksToLines(c.marks, ["?", "×"]), ["- ? p.4 为什么 15%", "- × NSP 没用"]);
+  assert.match(M.summarize(c).text, /做分类.*查了 WordPiece/);
+  const md = M.cardToMarkdown(c);
+  assert.match(md, /## 初步解决\n- \? CLS 干什么\n {2}→ 做分类\n\n查了 WordPiece/);
 });
 
 test("marks are brought into doubts and relevance once", () => {
@@ -98,13 +121,14 @@ test("grading follows 1 → 7 → 30 → 90 → 180 days", () => {
 
 test("index, due queue, backlinks, search and stats", () => {
   const a = M.applyStatus(card({ id: "20261010-gpt-aaaa", title: "GPT", readDate: "2026-10-10", status: "done", oneLine: "单向猜下一个词", tags: ["NLP"] }), "2026-10-10");
-  const b = card({ id: "20261015-bert-bbbb", title: "BERT", readDate: "2026-10-15", links: ["20261010-gpt-aaaa"], marks: [{ type: "?", text: "不懂" }, { type: "?", text: "也不懂" }], project: "毕设" });
+  const b = card({ id: "20261015-bert-bbbb", title: "BERT", readDate: "2026-10-15", links: ["20261010-gpt-aaaa"], marks: [{ type: "?", text: "不懂" }, { type: "?", text: "也不懂" }, { type: "?", text: "懂了", answer: "嗯" }], project: "毕设", pdf: "papers/20261015-bert-bbbb.pdf" });
   let idx = M.emptyIndex();
   idx = M.upsertIndex(idx, a);
   idx = M.upsertIndex(idx, b);
   idx = M.upsertIndex(idx, { ...b, title: "BERT v2" });
   assert.deepEqual(idx.cards.map((x) => x.title), ["BERT v2", "GPT"]);
   assert.equal(idx.cards[0].questions, 2);
+  assert.equal(idx.cards[0].pdf, true);
   assert.deepEqual(M.backlinks(idx.cards, "20261010-gpt-aaaa").map((x) => x.id), ["20261015-bert-bbbb"]);
   assert.deepEqual(M.dueCards(idx.cards, "2026-10-11").map((x) => x.id), ["20261010-gpt-aaaa"]);
   assert.deepEqual(M.nextReview(idx.cards, "2026-10-10"), { date: "2026-10-11", count: 1 });
@@ -144,6 +168,8 @@ test("bundled data files are valid and consistent", async () => {
   assert.equal(bert.status, "done");
   assert.ok(bert.tags.includes("示例"));
   assert.equal(M.progressText(bert), "卡片 7/7，写完了");
+  assert.equal(M.openQuestions(bert).length, 1);
+  assert.ok(bert.marks.some((m) => m.answer));
 });
 
 test("markdown renders safely", () => {
@@ -155,6 +181,7 @@ test("markdown renders safely", () => {
   assert.match(html, /<code>x&lt;y<\/code>/);
   assert.match(html, /<li>二级<ul><li>嵌套<\/li><\/ul><\/li>/);
   assert.match(html, /class="math">E=mc\^2</);
+  assert.equal(renderInline("**粗** *斜* <b>"), "<strong>粗</strong> <em>斜</em> &lt;b&gt;");
   assert.match(renderMarkdown("![图](uploads/a.webp)", { resolveImage: (u) => (u === "uploads/a.webp" ? "data:image/webp;base64,AA" : "") }), /src="data:image\/webp;base64,AA"/);
 });
 

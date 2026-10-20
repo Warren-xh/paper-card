@@ -1,5 +1,5 @@
 import * as M from "./model.mjs";
-import { renderMarkdown, escapeHtml as h } from "./markdown.mjs";
+import { renderMarkdown, renderInline, escapeHtml as h } from "./markdown.mjs";
 import { GitHubClient } from "./github.mjs";
 import { sealToken, openVault, passwordProblem, validToken } from "./vault.mjs";
 
@@ -43,6 +43,46 @@ const linkLabel = (url) => {
   if (/^(doi:|10\.)/i.test(url)) return "DOI";
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
 };
+
+/* ---------- input helpers ---------- */
+// Chinese/Japanese input methods use Enter to confirm a word; that Enter must
+// not also submit. Safari reports it with keyCode 229 or right after compositionend.
+let composing = false;
+let compositionEndAt = 0;
+addEventListener("compositionstart", () => (composing = true), true);
+addEventListener("compositionend", () => { composing = false; compositionEndAt = Date.now(); }, true);
+const plainEnter = (e) =>
+  e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && !composing && Date.now() - compositionEndAt > 80;
+
+// Wraps the selection in ** (bold) or * (italic); applied again it unwraps.
+function wrapSelection(el, mark) {
+  const v = el.value;
+  const s = el.selectionStart ?? v.length;
+  const e = el.selectionEnd ?? s;
+  const n = mark.length;
+  const wrapped = v.slice(s - n, s) === mark && v.slice(e, e + n) === mark &&
+    !(n === 1 && (v[s - n - 1] === "*" || v[e + n] === "*"));
+  if (s >= n && wrapped) {
+    el.setRangeText(v.slice(s, e), s - n, e + n, "select");
+  } else {
+    const inner = v.slice(s, e) || (n === 2 ? "粗体" : "斜体");
+    el.setRangeText(mark + inner + mark, s, e, "end");
+    el.setSelectionRange(s + n, s + n + inner.length);
+  }
+  el.focus();
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+// Fields whose text is rendered as Markdown, so bold/italic show up.
+const FORMATTABLE = "#markText, [data-k=text], [data-solve], textarea:not([name=oneLine]):not(.short)";
+
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(new Error("读取文件失败。"));
+    reader.readAsDataURL(file);
+  });
+const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1) + " MB";
 
 /* ---------- UI primitives ---------- */
 let toastTimer;
@@ -201,7 +241,7 @@ function rememberRecent(summary, removed = false) {
 // Saves one card (and the index) in a single commit; `change` turns the card
 // found at the branch head into the card to save, so other devices' edits merge.
 // A brand-new card passes change = null: there is nothing to merge with yet.
-async function saveCard(card, message, change, uploads = []) {
+async function saveCard(card, message, change, extraFiles = []) {
   const now = new Date().toISOString();
   let saved;
   await state.gh.commitLatest(async (head) => {
@@ -214,7 +254,7 @@ async function saveCard(card, message, change, uploads = []) {
       files: [
         { path: M.CARD_DIR + card.id + ".json", text: JSON.stringify(saved, null, 2) + "\n" },
         { path: M.INDEX_PATH, text: JSON.stringify(M.upsertIndex(index, saved, now), null, 1) + "\n" },
-        ...uploads.map(([path, url]) => ({ path, base64: url.split(",")[1] })),
+        ...extraFiles,
       ],
     };
   });
@@ -374,7 +414,7 @@ async function home() {
         <span class="stat"><b>${s.done}</b>篇读完 · ${s.reading} 篇在读</span>
         <span class="stat"><b>${s.thisMonth}</b>篇本月</span>
         <span class="stat"><b>${s.reviews}</b>次回顾</span>
-        ${s.questions ? `<span class="stat"><b>${s.questions}</b>个 ? 还没看懂</span>` : ""}
+        ${s.questions ? `<span class="stat"><b>${s.questions}</b>个 ? 还没解决</span>` : ""}
       </div>`
     : "";
 
@@ -390,7 +430,7 @@ async function home() {
         <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <span class="visually-hidden">搜索卡片</span><input type="search" id="q" placeholder="搜索标题、作者、一句话、笔记…" value="${h(state.filter.query)}"></label>
         <label><span class="visually-hidden">按状态筛选</span><select class="inline" id="status">
-          ${[["", "全部状态"], ["reading", "在读"], ["done", "读完"], ["questions", "有 ? 没看懂"]].map(([v, t]) => `<option value="${v}"${state.filter.status === v ? " selected" : ""}>${t}</option>`).join("")}
+          ${[["", "全部状态"], ["reading", "在读"], ["done", "读完"], ["questions", "有 ? 没解决"]].map(([v, t]) => `<option value="${v}"${state.filter.status === v ? " selected" : ""}>${t}</option>`).join("")}
         </select></label>
         ${projectSelect()}
       </div>
@@ -448,7 +488,8 @@ function tileHtml(x, today) {
     <div class="pcard-top">
       <span class="status s-${x.status}">${M.STATUS_LABELS[x.status]}</span>
       ${M.isDue(x, today) ? `<span class="due-tag">该回顾</span>` : ""}
-      ${x.questions ? `<span class="qbadge" title="还有 ${x.questions} 个没看懂的地方">? ${x.questions}</span>` : ""}
+      ${x.pdf ? `<span class="pdf-tag" title="附有论文 PDF">PDF</span>` : ""}
+      ${x.questions ? `<span class="qbadge" title="还有 ${x.questions} 个 ? 没解决">? ${x.questions}</span>` : ""}
     </div>
     <p class="pcard-one">${x.oneLine ? h(x.oneLine) : '<span class="untitled">还没写一句话</span>'}</p>
     <div class="pcard-paper"><h3>${x.title ? h(x.title) : '<span class="untitled">未写标题</span>'}</h3>
@@ -460,16 +501,16 @@ function tileHtml(x, today) {
 /* Card detail */
 const imageResolver = (images) => (src) => images?.[src] || "";
 const mdOf = (images) => (text) => renderMarkdown(text, { shiftHeadings: 2, resolveImage: imageResolver(images) });
-const blank = `<p class="blank">没写出来——这里可能还没真正懂。</p>`;
-
 function cardBodyHtml(c, images, { recall = false } = {}) {
   const md = mdOf(images);
   const titleOf = (id) => state.index.cards.find((x) => x.id === id);
-  const block = (n, body, cls = "") => {
+  // Sections left empty are not shown.
+  const block = (n, body, cls = "wide") => {
+    if (!body) return "";
     const s = M.SECTIONS[n - 1];
     return `<section class="sec recall-block ${cls}" data-sec="${n}">
       <h2 class="sec-label"><span class="num">${s.mark}</span>${s.title}</h2>
-      <div class="sec-body">${body || blank}</div>
+      <div class="sec-body">${body}</div>
       ${recall ? `<button type="button" class="reveal">揭晓</button>` : ""}
     </section>`;
   };
@@ -487,28 +528,46 @@ function cardBodyHtml(c, images, { recall = false } = {}) {
     : "";
   const one = `<section class="one-line recall-block" data-sec="1">
       <h2 class="sec-label"><span class="num">①</span>一句话</h2>
-      <div class="sec-body"><p>${c.oneLine ? h(c.oneLine) : '<span class="blank">还没写一句话。合上论文，试着用一句话说出它。</span>'}</p></div>
+      <div class="sec-body"><p>${c.oneLine ? h(c.oneLine) : '<span class="blank">还没写一句话</span>'}</p></div>
       ${recall ? `<button type="button" class="reveal">揭晓</button>` : ""}
     </section>`;
   const text = (v) => (v.trim() ? `<div class="md">${md(v)}</div>` : "");
+  // ⑤ and ⑥ sit side by side only when both are written.
+  const pair = c.doubts.trim() && c.relevance.trim() ? "half" : "wide";
   return one +
     `<div class="sec-grid">
       ${block(2, text(c.pain))}
-      ${block(3, text(c.idea), "wide")}
-      ${block(4, proof, "wide")}
-      ${block(5, text(c.doubts))}
-      ${block(6, text(c.relevance))}
-      ${block(7, links, "wide")}
+      ${block(3, text(c.idea))}
+      ${block(4, proof)}
+      ${block(5, text(c.doubts), pair)}
+      ${block(6, text(c.relevance), pair)}
+      ${block(7, links)}
     </div>`;
 }
+
+const markSym = (type) => `<span class="mark-sym t${M.MARKS.findIndex((x) => x.type === type)}" title="${M.markLabel(type)}">${type}</span>`;
 
 function marksHtml(c) {
   if (!c.marks.length) return "";
   return `<section class="section"><h2>阅读标记</h2>
     <ul class="mark-view">${c.marks
-      .map((m) => `<li><span class="mark-sym t${M.MARKS.findIndex((x) => x.type === m.type)}" title="${M.markLabel(m.type)}">${m.type}</span>${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${h(m.text)}</span></li>`)
+      .map((m) => `<li>${markSym(m.type)}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}${m.type === "?" && m.answer ? ` <span class="solved-tick" title="已初步解决">✓</span>` : ""}</span></li>`)
       .join("")}</ul></section>`;
 }
+
+// First pass: each "?" with the answer found after reading once.
+function solvedHtml(c, images) {
+  const questions = c.marks.filter((m) => m.type === "?");
+  if (!questions.length && !c.solved.trim()) return "";
+  return `<section class="section"><h2>初步解决</h2>
+    ${questions.length ? `<ul class="solve-view">${questions
+      .map((m) => `<li><div class="q">${markSym("?")}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}</span></div>
+        <div class="a">${m.answer ? renderInline(m.answer) : '<span class="muted">还没解决</span>'}</div></li>`)
+      .join("")}</ul>` : ""}
+    ${c.solved.trim() ? `<div class="md">${mdOf(images)(c.solved)}</div>` : ""}</section>`;
+}
+
+const pdfName = (c) => c.pdfName || c.pdf.split("/").pop();
 
 function headHtml(c) {
   const meta = [`<span class="status s-${c.status}">${M.STATUS_LABELS[c.status]}</span>`];
@@ -519,6 +578,7 @@ function headHtml(c) {
   return `<div class="meta-line">${meta.join("")}</div>
     <h1 class="card-title">${c.title ? h(c.title) : '<span class="untitled">未写标题</span>'}</h1>
     ${cite || c.link ? `<p class="cite">${h(cite)}${c.link ? `${cite ? " · " : ""}<a href="${h(M.paperHref(c.link))}" target="_blank" rel="noopener">${h(linkLabel(c.link))}</a>` : ""}</p>` : ""}
+    ${c.pdf ? `<p class="pdf-line"><a class="btn small" href="${h(c.pdf)}" download="${h(pdfName(c))}">下载论文 PDF</a><a class="small" href="${h(c.pdf)}" target="_blank" rel="noopener">在新标签页打开</a></p>` : ""}
     ${c.why ? `<p class="why"><b>为什么读：</b>${h(c.why)}</p>` : ""}`;
 }
 
@@ -556,6 +616,7 @@ async function cardView(id) {
       <p class="recall-hint" hidden>先别看：试着自己说出每一栏，再点「揭晓」对照。</p>
       ${cardBodyHtml(c, null, { recall: true })}
       ${marksHtml(c)}
+      ${solvedHtml(c)}
       ${c.notes.trim() ? `<section class="section"><h2>自由笔记</h2><div class="md">${mdOf(null)(c.notes)}</div></section>` : ""}
       ${reviewsHtml(c)}
     </article>`;
@@ -684,6 +745,8 @@ async function editView(id) {
   const projects = M.projectList(state.index.cards).map(([p]) => p);
   const allTags = M.tagCounts(state.index.cards).map(([t]) => t);
   const sec = (n) => M.SECTIONS[n - 1];
+  const tools = (name, image = false) =>
+    `<div class="md-tools"><button type="button" class="fmt" data-fmt="**" data-for="${name}" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="${name}" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${image ? `<button type="button" class="btn quiet small" data-image="${name}">插入图片</button>` : ""}</div>`;
   const secHead = (n, hint) => `<h3><span class="num">${sec(n).mark}</span>${sec(n).title}</h3>${hint ? `<p class="hint">${hint}</p>` : ""}`;
 
   main.innerHTML = `
@@ -707,6 +770,10 @@ async function editView(id) {
         <div class="field"><span class="label" id="statusLabel">状态</span><div class="seg" role="group" aria-labelledby="statusLabel">
           <button type="button" data-status="reading">在读</button><button type="button" data-status="done">读完</button></div></div>
       </div>
+      <div class="pdf-field"><span class="label">论文 PDF</span>
+        <div class="pdf-box" id="pdfBox"></div>
+        <p class="hint small">PDF 会存到 GitHub 仓库的 papers/ 文件夹，之后在卡片页可以下载。仓库是公开的，知道链接的人都能下载，付费期刊的论文请留意版权。最大 50 MB。</p>
+        <input type="file" id="pdfPick" accept="application/pdf,.pdf" hidden></div>
       <datalist id="projList">${projects.map((p) => `<option value="${h(p)}">`).join("")}</datalist>
       <datalist id="tagList">${allTags.map((t) => `<option value="${h(t)}">`).join("")}</datalist>
 
@@ -715,16 +782,25 @@ async function editView(id) {
           <input name="why" maxlength="300" placeholder="比如：想知道预训练 + 微调为什么比从头训练好"></label></section>
 
       <section class="stage"><h2><span class="stage-n">2</span>边读边记</h2>
-        <p class="hint">只打标记，不写长句。选一个符号，填页码（可不填），写几个字，回车就记下一条。</p>
+        <p class="hint">只打标记，不写长句。选一个符号，写几个字，回车就记下一条。页码从 1 开始，翻页时点 ＋（也可以直接改数字，或清空不填）。</p>
         <div class="mark-input">
-          <div class="mark-types" role="radiogroup" aria-label="标记类型">${M.MARKS.map((m, k) => `<button type="button" role="radio" class="t${k}" data-type="${m.type}" aria-checked="${k === 0}"><b>${m.type}</b>${m.label}</button>`).join("")}</div>
-          <div class="mark-line"><input class="input page" id="markPage" placeholder="页码" maxlength="12" inputmode="numeric" aria-label="页码">
+          <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="标记类型">${M.MARKS.map((m, k) => `<button type="button" role="radio" class="t${k}" data-type="${m.type}" aria-checked="${k === 0}"><b>${m.type}</b>${m.label}</button>`).join("")}</div>
+            <div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div>
+          <div class="mark-line">
+            <div class="page-step"><button type="button" class="step" data-step="-1" aria-label="上一页">−</button><input class="input page" id="markPage" placeholder="页" maxlength="12" inputmode="numeric" aria-label="页码"><button type="button" class="step" data-step="1" aria-label="下一页">＋</button></div>
             <input class="input" id="markText" maxlength="300" placeholder="几个字就够，回车记下" aria-label="标记内容" enterkeyhint="done">
             <button type="button" class="btn" id="addMark">记下</button></div>
         </div>
         <ol class="marks-list" id="marks"></ol></section>
 
-      <section class="stage"><h2><span class="stage-n">3</span>读完 · 合上论文再写</h2>
+      <section class="stage"><h2><span class="stage-n">3</span>初步解决问题</h2>
+        <p class="hint">读完第一遍，先把标了 ? 的地方简单解决一遍：查资料、问人、回看原文都行。写了答案的 ? 就不再算「没看懂」；还没弄懂的先空着，之后可以「带入」到 ⑤。</p>
+        <p class="small" id="solveCount"></p>
+        <ol class="solve-list" id="solveList"></ol>
+        <label class="field" style="margin-top:12px"><span>其他初步弄懂的</span><textarea class="textarea" name="solved" rows="3" placeholder="比如：查了一下 xx 的意思，原来是……"></textarea></label>
+        ${tools("solved")}</section>
+
+      <section class="stage"><h2><span class="stage-n">4</span>读完 · 合上论文再写</h2>
         <p class="callout">写的时候不看原文，写不出来的那栏就是没懂的地方。</p>
 
         <div class="esec">${secHead(1, "最重要的一栏。点下面的句式，直接打字填空，按 Tab 跳到下一个空。")}
@@ -732,11 +808,10 @@ async function editView(id) {
           <textarea class="textarea one" name="oneLine" rows="2" maxlength="400" placeholder="这篇论文用一句话说就是……"></textarea></div>
 
         <div class="esec">${secHead(2, "它要解决什么问题？之前的方法差在哪？")}
-          <textarea class="textarea" name="pain" rows="3"></textarea></div>
+          <textarea class="textarea" name="pain" rows="3"></textarea>${tools("pain")}</div>
 
         <div class="esec">${secHead(3, "它的关键一招是什么？能画出来就画一张图。")}
-          <textarea class="textarea" name="idea" rows="5"></textarea>
-          <div class="md-tools"><button type="button" class="btn quiet small" data-image="idea">插入图片</button></div></div>
+          <textarea class="textarea" name="idea" rows="5"></textarea>${tools("idea", true)}</div>
 
         <div class="esec">${secHead(4, "用什么数据、和谁比、关键数字是多少。")}
           <div class="proof-grid">
@@ -746,23 +821,23 @@ async function editView(id) {
           </div></div>
 
         <div class="esec">${secHead(5, "哪里没看懂、哪里站不住、哪些情况它不适用。")}
-          <div class="prompts"><button type="button" data-bring="doubts">带入阅读时的 ? 和 ×</button></div>
-          <textarea class="textarea" name="doubts" rows="4"></textarea></div>
+          <div class="prompts"><button type="button" data-bring="doubts">带入还没解决的 ? 和 ×</button></div>
+          <textarea class="textarea" name="doubts" rows="4"></textarea>${tools("doubts")}</div>
 
         <div class="esec">${secHead(6, "我能借鉴什么？对我的研究有什么用？")}
           <div class="prompts"><button type="button" data-bring="relevance">带入 ★</button></div>
-          <textarea class="textarea" name="relevance" rows="4"></textarea></div>
+          <textarea class="textarea" name="relevance" rows="4"></textarea>${tools("relevance")}</div>
 
-        <div class="esec">${secHead(7, "勾选相关的其他卡片（两张卡片上都会显示），再写一句它们的区别。")}
-          ${others.length > 8 ? `<input class="input" id="linkFilter" placeholder="筛选卡片…" style="margin-bottom:8px">` : ""}
-          ${others.length ? `<div class="link-pick" id="linkPick">${others.map((x) => `<label class="check-row" data-title="${h((x.title + " " + x.oneLine).toLowerCase())}"><input type="checkbox" value="${h(x.id)}"${card.links.includes(x.id) ? " checked" : ""}><span>${h(x.title || x.id)}${back.some((b) => b.id === x.id) ? ` <small class="muted">（它已关联这张）</small>` : ""}</span></label>`).join("")}</div>` : `<p class="muted small">还没有其他卡片可以关联。</p>`}
-          <textarea class="textarea" name="linkNote" rows="3" placeholder="和它们比，这篇的不同在于……" style="margin-top:8px"></textarea></div>
+        <div class="esec">${secHead(7, "搜索并选中相关的已有卡片，再写一句它们的区别。关联只记下对方的编号，不会多出卡片；两张卡片上都会显示。")}
+          <div class="link-chosen" id="linkChosen"></div>
+          ${others.length ? `<div class="link-search"><input class="input" id="linkSearch" placeholder="输入标题、作者或关键词找卡片…" autocomplete="off" aria-label="搜索要关联的卡片"><div class="link-results" id="linkResults"></div></div>` : `<p class="muted small">还没有其他卡片可以关联。</p>`}
+          ${back.length ? `<p class="hint small" style="margin-top:6px">这些卡片已经关联了这张，会自动显示在两边，不用再选：${back.map((b) => h(b.title || b.id)).join("、")}</p>` : ""}
+          <textarea class="textarea" name="linkNote" rows="3" placeholder="和它们比，这篇的不同在于……" style="margin-top:8px"></textarea>${tools("linkNote")}</div>
       </section>
 
       <section class="stage"><h2><span class="stage-n">+</span>自由笔记</h2>
         <p class="hint">任何想记的：公式、推导、代码、截图。支持 Markdown，公式用 $…$。</p>
-        <textarea class="textarea" name="notes" rows="6"></textarea>
-        <div class="md-tools"><button type="button" class="btn quiet small" data-image="notes">插入图片</button></div></section>
+        <textarea class="textarea" name="notes" rows="6"></textarea>${tools("notes", true)}</section>
       <input type="file" id="imgPick" accept="image/*" hidden>
     </form>
     <div class="sheet" id="preview" hidden></div>
@@ -775,7 +850,7 @@ async function editView(id) {
     </div>`;
 
   const form = $("#editor");
-  for (const k of ["title", "authors", "venue", "link", "project", "readDate", "why", "oneLine", "pain", "idea", "doubts", "relevance", "linkNote", "notes"]) form[k].value = card[k] ?? "";
+  for (const k of ["title", "authors", "venue", "link", "project", "readDate", "why", "oneLine", "pain", "idea", "doubts", "relevance", "linkNote", "notes", "solved"]) form[k].value = card[k] ?? "";
   form.year.value = card.year ?? "";
   form.tags.value = card.tags.join(", ");
   for (const k of ["datasets", "baselines", "numbers"]) form[k].value = card.proof[k];
@@ -789,22 +864,56 @@ async function editView(id) {
   let markType = M.MARKS[0].type;
   const typeIndex = (t) => M.MARKS.findIndex((m) => m.type === t);
   const markRow = (m) =>
-    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><input class="input" data-k="text" value="${h(m.text)}" aria-label="标记内容"><button type="button" class="x" aria-label="删除">×</button></li>`;
+    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><input class="input" data-k="text" value="${h(m.text)}" aria-label="标记内容"><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><button type="button" class="x" aria-label="删除">×</button></li>`;
   $("#marks").innerHTML = card.marks.map(markRow).join("");
-  const paintTypes = () => $$(".mark-types [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === markType)));
-  $$(".mark-types [data-type]").forEach((b) => (b.onclick = () => { markType = b.dataset.type; paintTypes(); $("#markText").focus(); }));
+  const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === markType)));
+  $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { markType = b.dataset.type; paintTypes(); $("#markText").focus(); }));
+  // Page number: starts at 1 (or where the last mark was) and steps with − / ＋.
+  $("#markPage").value = card.marks.at(-1)?.page || "1";
+  const stepPage = (d) => {
+    const input = $("#markPage");
+    input.value = String(Math.max(1, (parseInt(input.value, 10) || 0) + d));
+  };
+  $$(".page-step [data-step]").forEach((b) => (b.onclick = () => stepPage(+b.dataset.step)));
   const addMark = () => {
     const text = $("#markText").value.trim();
-    const page = $("#markPage").value.trim();
-    if (!text && !page) return $("#markText").focus();
-    $("#marks").insertAdjacentHTML("beforeend", markRow({ type: markType, page, text }));
+    if (!text) return $("#markText").focus();
+    $("#marks").insertAdjacentHTML("beforeend", markRow({ type: markType, page: $("#markPage").value.trim(), text }));
     $("#markText").value = "";
     $("#markText").focus();
+    renderSolve();
     changed();
   };
   $("#addMark").onclick = addMark;
-  $("#markText").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); addMark(); } });
-  $("#markPage").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); $("#markText").focus(); } });
+  $("#markText").addEventListener("keydown", (e) => { if (plainEnter(e)) { e.preventDefault(); addMark(); } });
+  $("#markPage").addEventListener("keydown", (e) => {
+    if (plainEnter(e)) { e.preventDefault(); $("#markText").focus(); }
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); stepPage(e.key === "ArrowUp" ? 1 : -1); }
+  });
+
+  // First pass: one answer box per "?" mark, stored on the mark itself.
+  let solveRows = [];
+  const paintSolveCount = () => {
+    const open = solveRows.filter((r) => !$("[data-k=answer]", r).value.trim()).length;
+    $("#solveCount").textContent = solveRows.length ? (open ? `还有 ${open} 个 ? 没解决，已解决 ${solveRows.length - open} 个。` : `${solveRows.length} 个 ? 都初步解决了。`) : "";
+  };
+  function renderSolve() {
+    solveRows = $$("#marks [data-row]").filter((r) => $(".mark-sym", r).dataset.type === "?");
+    $("#solveList").innerHTML = solveRows.length
+      ? solveRows.map((r, i) => {
+          const page = $("[data-k=page]", r).value.trim();
+          return `<li><div class="q">${markSym("?")}${page ? `<span class="page">p.${h(page)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
+            <input class="input" data-solve="${i}" value="${h($("[data-k=answer]", r).value)}" placeholder="简单写下答案；还没弄懂就先空着" aria-label="答案"></li>`;
+        }).join("")
+      : `<li class="muted small">阅读时还没有标记 ?。</li>`;
+    paintSolveCount();
+  }
+  renderSolve();
+  $("#solveList").addEventListener("input", (e) => {
+    const row = solveRows[e.target.dataset.solve];
+    if (row) { $("[data-k=answer]", row).value = e.target.value; paintSolveCount(); }
+  });
+  $("#marks").addEventListener("input", renderSolve);
   $("#marks").addEventListener("click", (e) => {
     const sym = e.target.closest(".mark-sym");
     if (!sym) return;
@@ -813,14 +922,22 @@ async function editView(id) {
     sym.textContent = next.type;
     sym.className = "mark-sym t" + typeIndex(next.type);
     sym.title = next.label + "（点一下换符号）";
+    renderSolve();
     changed();
   });
   form.addEventListener("click", (e) => {
     const x = e.target.closest(".x");
-    if (x) { x.closest("[data-row]").remove(); changed(); }
+    if (x) { x.closest("[data-row]").remove(); renderSolve(); changed(); }
+    const fmt = e.target.closest(".fmt");
+    if (fmt) wrapSelection(fmt.dataset.for === "markText" ? $("#markText") : form[fmt.dataset.for], fmt.dataset.fmt);
   });
   form.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.matches("input") && !e.target.closest(".mark-input") && !e.isComposing) e.preventDefault();
+    // Enter never submits the form (input methods confirm words with it).
+    if (e.key === "Enter" && e.target.matches("input") && !e.target.closest(".mark-input")) e.preventDefault();
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && /^[bi]$/i.test(e.key) && e.target.matches(FORMATTABLE)) {
+      e.preventDefault();
+      wrapSelection(e.target, e.key.toLowerCase() === "b" ? "**" : "*");
+    }
   });
 
   // ① sentence pattern: insert it and select the first unfilled blank; Tab jumps to the next one.
@@ -864,10 +981,81 @@ async function editView(id) {
     };
   });
 
-  $("#linkFilter")?.addEventListener("input", (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    $$("#linkPick label").forEach((l) => (l.hidden = !!q && !l.dataset.title.includes(q)));
+  // ⑦ links: chosen cards as chips; search to add more.
+  let links = [...card.links];
+  const titleOfId = (x) => state.index.cards.find((c) => c.id === x)?.title || x;
+  const paintLinks = () => {
+    $("#linkChosen").innerHTML = links
+      .map((x) => `<span class="link-chip">${h(titleOfId(x))}<button type="button" class="unlink" data-unlink="${h(x)}" aria-label="取消关联">×</button></span>`)
+      .join("");
+  };
+  const paintResults = () => {
+    const box = $("#linkResults");
+    if (!box) return;
+    const q = $("#linkSearch").value.trim().toLowerCase();
+    const focused = document.activeElement === $("#linkSearch");
+    if (!q && !focused) return (box.innerHTML = "");
+    const terms = q.split(/\s+/).filter(Boolean);
+    const list = others
+      .filter((x) => !links.includes(x.id) && terms.every((t) => (x.title + " " + x.authors + " " + x.oneLine + " " + x.tags.join(" ")).toLowerCase().includes(t)))
+      .slice(0, 6);
+    box.innerHTML = list.length
+      ? (q ? "" : `<p class="muted small">最近的卡片：</p>`) + list.map((x) => `<button type="button" class="link-result" data-link="${h(x.id)}"><b>${h(x.title || x.id)}</b>${x.oneLine ? `<span>${h(x.oneLine)}</span>` : ""}</button>`).join("")
+      : q ? `<p class="muted small">没有找到匹配的卡片。</p>` : "";
+  };
+  paintLinks();
+  $("#linkSearch")?.addEventListener("input", paintResults);
+  $("#linkSearch")?.addEventListener("focus", paintResults);
+  $("#linkSearch")?.addEventListener("blur", () => setTimeout(paintResults, 200));
+  // Picking a result must not blur the search box first.
+  $("#linkResults")?.addEventListener("pointerdown", (e) => e.preventDefault());
+  form.addEventListener("click", (e) => {
+    const add = e.target.closest("[data-link]");
+    const remove = e.target.closest("[data-unlink]");
+    if (!add && !remove) return;
+    if (add) { links.push(add.dataset.link); $("#linkSearch").value = ""; }
+    else links = links.filter((x) => x !== remove.dataset.unlink);
+    paintLinks();
+    paintResults();
+    changed();
   });
+
+  // Paper PDF: uploaded to the repository right away so it is never lost.
+  let pdf = card.pdf;
+  let pdfLabel = card.pdfName;
+  const uploadedPdfs = new Set();
+  const paintPdf = () => {
+    $("#pdfBox").innerHTML = pdf
+      ? `<span class="pdf-file" title="${h(pdf)}">${h(pdfLabel || pdf.split("/").pop())}</span><button type="button" class="btn small" id="pdfReplace">换一个</button><button type="button" class="btn quiet small danger" id="pdfRemove">移除</button>`
+      : `<button type="button" class="btn small" id="pdfUpload">上传 PDF</button>`;
+    ($("#pdfUpload") || $("#pdfReplace")).onclick = () => $("#pdfPick").click();
+    $("#pdfRemove")?.addEventListener("click", () => { pdf = ""; pdfLabel = ""; paintPdf(); changed(); toast("已移除。发布后仓库里的 PDF 也会删掉。"); });
+  };
+  paintPdf();
+  $("#pdfPick").onchange = async (event) => {
+    const file = event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) return toast("请选择 PDF 文件。", "error");
+    if (file.size > M.PDF_MAX_BYTES) return toast("PDF 太大了（" + mb(file.size) + "），最大 50 MB。", "error");
+    if (!(await ensureUnlocked())) return;
+    const box = $("#pdfBox");
+    box.innerHTML = `<span class="muted">正在上传 ${h(file.name)}（${mb(file.size)}）…</span>`;
+    try {
+      const path = M.pdfPath(isNew ? M.makeId(form.readDate.value || M.todayISO(), form.title.value || file.name.replace(/\.pdf$/i, "")) : id);
+      const base64 = await fileToBase64(file);
+      await state.gh.commitLatest(async () => ({ message: "上传论文 PDF：" + file.name.slice(0, 80), files: [{ path, base64 }] }));
+      uploadedPdfs.add(path);
+      pdf = path;
+      pdfLabel = file.name;
+      changed();
+      toast("PDF 已上传到仓库。记得点「发布」保存卡片。");
+    } catch (error) {
+      console.error(error);
+      toast("上传失败：" + error.message, "error");
+    }
+    paintPdf();
+  };
 
   // Images: resized in the browser, published with the card.
   let imageTarget = "notes";
@@ -895,7 +1083,7 @@ async function editView(id) {
   };
 
   const collectMarks = () =>
-    $$("#marks [data-row]").map((r) => ({ type: $(".mark-sym", r).dataset.type, page: $("[data-k=page]", r).value, text: $("[data-k=text]", r).value }));
+    $$("#marks [data-row]").map((r) => ({ type: $(".mark-sym", r).dataset.type, page: $("[data-k=page]", r).value, text: $("[data-k=text]", r).value, answer: $("[data-k=answer]", r).value }));
   const collect = () =>
     M.normalizeCard({
       ...card,
@@ -904,19 +1092,22 @@ async function editView(id) {
       year: form.year.value,
       venue: form.venue.value,
       link: form.link.value,
+      pdf,
+      pdfName: pdfLabel,
       tags: form.tags.value,
       project: form.project.value,
       readDate: form.readDate.value,
       status,
       why: form.why.value,
       marks: collectMarks(),
+      solved: form.solved.value,
       oneLine: form.oneLine.value,
       pain: form.pain.value,
       idea: form.idea.value,
       proof: { datasets: form.datasets.value, baselines: form.baselines.value, numbers: form.numbers.value },
       doubts: form.doubts.value,
       relevance: form.relevance.value,
-      links: $$("#linkPick input:checked").map((i) => i.value),
+      links,
       linkNote: form.linkNote.value,
       notes: form.notes.value,
     });
@@ -966,7 +1157,7 @@ async function editView(id) {
     box.hidden = !preview;
     if (preview) {
       const c = collect();
-      box.innerHTML = headHtml(c) + cardBodyHtml(c, images) + marksHtml(c) +
+      box.innerHTML = headHtml(c) + cardBodyHtml(c, images) + marksHtml(c) + solvedHtml(c, images) +
         (c.notes.trim() ? `<section class="section"><h2>自由笔记</h2><div class="md">${mdOf(images)(c.notes)}</div></section>` : "");
       typesetMath(box);
     }
@@ -989,12 +1180,17 @@ async function editView(id) {
       const finalId = isNew ? M.makeId(draftCard.readDate || today, draftCard.title) : id;
       const c = M.applyStatus({ ...draftCard, id: finalId }, today);
       // Only upload images still referenced in the text.
-      const text = c.idea + c.notes + c.pain + c.doubts + c.relevance + c.linkNote;
+      const text = c.idea + c.notes + c.pain + c.doubts + c.relevance + c.linkNote + c.solved;
       const uploads = Object.entries(images).filter(([path]) => text.includes(path));
+      // PDFs replaced or removed while editing are deleted from the repository.
+      const stalePdfs = [...new Set([existing?.pdf, ...uploadedPdfs])].filter((p) => p && p !== c.pdf);
       await saveCard(c, (isNew ? "新增卡片：" : "更新卡片：") + c.title.slice(0, 60), isNew ? null : (latest) =>
         // Keep review history recorded on other devices in the meantime.
         ({ ...c, srs: c.status === "done" ? latest.srs || c.srs : c.srs, reviews: latest.reviews.length > c.reviews.length ? latest.reviews : c.reviews }),
-        uploads,
+        [
+          ...uploads.map(([path, url]) => ({ path, base64: url.split(",")[1] })),
+          ...stalePdfs.map((path) => ({ path, remove: true })),
+        ],
       );
       store.del(draftKey);
       editorDirty = false;
@@ -1023,6 +1219,7 @@ async function editView(id) {
           message: "删除卡片：" + (existing.title || id).slice(0, 60),
           files: [
             { path: M.CARD_DIR + id + ".json", remove: true },
+            ...(existing.pdf ? [{ path: existing.pdf, remove: true }] : []),
             { path: M.INDEX_PATH, text: JSON.stringify(M.removeFromIndex(index, id), null, 1) + "\n" },
           ],
         };

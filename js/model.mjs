@@ -100,6 +100,8 @@ export function emptyCard(id = "") {
     year: null,
     venue: "",
     link: "",
+    pdf: "",
+    pdfName: "",
     tags: [],
     project: "",
     readDate: "",
@@ -107,6 +109,7 @@ export function emptyCard(id = "") {
     doneAt: "",
     why: "",
     marks: [],
+    solved: "",
     oneLine: "",
     pain: "",
     idea: "",
@@ -157,6 +160,14 @@ function normalizeSrs(raw) {
   return { level: int(raw.level, 0, INTERVALS.length - 1) ?? 0, due: raw.due };
 }
 
+// Uploaded paper PDFs live under papers/ in the repository.
+export const PDF_RE = /^papers\/[A-Za-z0-9._-]{1,80}\.pdf$/;
+export const PDF_MAX_BYTES = 50 * 1024 * 1024;
+
+export function pdfPath(id) {
+  return "papers/" + id + ".pdf";
+}
+
 export function normalizeCard(raw) {
   if (!raw || typeof raw !== "object") throw new Error("卡片格式不正确。");
   if (!validId(raw.id)) throw new Error("卡片编号不正确。");
@@ -166,6 +177,8 @@ export function normalizeCard(raw) {
   c.year = int(raw.year, 1800, 2200);
   c.venue = str(raw.venue, 120).trim();
   c.link = safeUrl(str(raw.link, 500).trim());
+  c.pdf = PDF_RE.test(raw.pdf) ? raw.pdf : "";
+  c.pdfName = c.pdf ? str(raw.pdfName, 200).trim() : "";
   c.tags = normalizeTags(raw.tags);
   c.project = str(raw.project, 60).trim();
   c.readDate = validDate(raw.readDate) ? raw.readDate : "";
@@ -177,9 +190,11 @@ export function normalizeCard(raw) {
       type: MARK_TYPES.has(m?.type) ? m.type : "!",
       page: str(String(m?.page ?? ""), 12).trim(),
       text: str(m?.text, 300).trim(),
+      answer: str(m?.answer, 2000).trim(),
     }))
-    .filter((m) => m.text || m.page)
+    .filter((m) => m.text)
     .slice(0, 200);
+  c.solved = str(raw.solved);
   c.oneLine = str(raw.oneLine, 400).trim();
   c.pain = str(raw.pain);
   c.idea = str(raw.idea);
@@ -205,7 +220,7 @@ export function normalizeCard(raw) {
 }
 
 export function isEmptyCard(c) {
-  return !(c.title || c.oneLine || c.why || c.marks.length || c.pain.trim() || c.idea.trim() || c.notes.trim());
+  return !(c.title || c.oneLine || c.why || c.marks.length || c.pain.trim() || c.idea.trim() || c.notes.trim() || c.pdf);
 }
 
 // Which of the seven parts are written.
@@ -237,6 +252,9 @@ export function applyStatus(card, today = todayISO()) {
   }
   return c;
 }
+
+// "?" marks that have no answer yet in the first-pass solving stage.
+export const openQuestions = (c) => c.marks.filter((m) => m.type === "?" && !m.answer);
 
 export function isDue(x, today = todayISO()) {
   return x.status === "done" && !!x.due && x.due <= today;
@@ -284,7 +302,8 @@ const stripMd = (text) =>
 export function plainText(c) {
   return [
     c.title, c.authors, c.venue, c.year, c.project, c.tags.join(" "), c.why,
-    c.marks.map((m) => m.text).join(" "),
+    c.marks.map((m) => m.text + " " + m.answer).join(" "),
+    stripMd(c.solved),
     c.oneLine, stripMd(c.pain), stripMd(c.idea),
     c.proof.datasets, c.proof.baselines, c.proof.numbers,
     stripMd(c.doubts), stripMd(c.relevance), stripMd(c.linkNote), stripMd(c.notes),
@@ -307,7 +326,8 @@ export function summarize(c) {
     readDate: c.readDate,
     status: c.status,
     oneLine: c.oneLine,
-    questions: c.marks.filter((m) => m.type === "?").length,
+    questions: openQuestions(c).length,
+    pdf: !!c.pdf,
     marks: c.marks.length,
     filled: p.filled,
     links: c.links,
@@ -394,9 +414,10 @@ export function projectList(summaries) {
 
 /* ---------- editor helpers ---------- */
 // Lines for "带入": marks of the given types not already present in `text`.
+// Questions already answered in the first pass are not doubts any more.
 export function marksToLines(marks, types, text = "") {
   return marks
-    .filter((m) => types.includes(m.type) && m.text && !text.includes(m.text))
+    .filter((m) => types.includes(m.type) && m.text && !(m.type === "?" && m.answer) && !text.includes(m.text))
     .map((m) => "- " + m.type + " " + (m.page ? "p." + m.page + " " : "") + m.text);
 }
 
@@ -408,6 +429,7 @@ export function cardToMarkdown(c, titles = new Map()) {
   const meta = [];
   if (citation(c)) meta.push(citation(c));
   if (c.link) meta.push("链接：" + paperHref(c.link));
+  if (c.pdf) meta.push("PDF：" + c.pdf);
   meta.push("状态：" + STATUS_LABELS[c.status] + (c.readDate ? "（" + c.readDate + " 阅读）" : ""));
   if (c.project) meta.push("项目：" + c.project);
   if (c.tags.length) meta.push("标签：" + c.tags.map((t) => "#" + t).join(" "));
@@ -429,6 +451,9 @@ export function cardToMarkdown(c, titles = new Map()) {
   sec("⑦", "关联", links);
   if (c.marks.length)
     out.push("## 阅读标记\n" + c.marks.map((m) => "- " + m.type + " " + (m.page ? "p." + m.page + " " : "") + m.text).join("\n"));
+  const answered = c.marks.filter((m) => m.type === "?" && m.answer);
+  const solved = [answered.map((m) => "- ? " + m.text + "\n  → " + m.answer).join("\n"), c.solved.trim()].filter(Boolean).join("\n\n");
+  sec("", "初步解决", solved);
   sec("", "自由笔记", c.notes);
   return out.join("\n\n").replace(/^## {2}/gm, "## ") + "\n";
 }
