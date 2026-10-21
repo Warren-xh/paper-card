@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "id": "20261021-log-8dck",
+  "title": "把文字转变为数字",
+  "date": "2026-10-21",
+  "status": "doing",
+  "hours": null,
+  "project": "",
+  "tags": [],
+  "env": "",
+  "link": "",
+  "goal": "研究文字是怎么通过代码转换成数字的",
+  "steps": [
+    {
+      "type": "▶",
+      "time": "16:21",
+      "text": "读取数据，countVectorizer 全部转小写，根据规则切词，去掉常见虚词",
+      "solve": false,
+      "answer": ""
+    },
+    {
+      "type": "▶",
+      "time": "16:25",
+      "text": "TF-IDF = tf *idf =  这条消息里出现的次数 * 这个词的稀有程度 IDF=ln 1+n/1+df +1",
+      "solve": false,
+      "answer": ""
+    }
+  ],
+  "conclusion": "感觉有点莫名其妙的 看的有点复杂",
+  "fixes": "",
+  "code": "",
+  "results": "",
+  "next": "",
+  "papers": [],
+  "notes": "",
+  "createdAt": "2026-10-21T16:17:16.609Z",
+  "updatedAt": "2026-10-21T16:17:16.609Z"
+}

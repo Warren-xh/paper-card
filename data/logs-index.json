@@ -1,5 +1,22 @@
 {
  "version": 1,
- "updatedAt": "",
- "logs": []
+ "updatedAt": "2026-10-21T16:17:16.609Z",
+ "logs": [
+  {
+   "id": "20261021-log-8dck",
+   "title": "把文字转变为数字",
+   "date": "2026-10-21",
+   "status": "doing",
+   "hours": null,
+   "project": "",
+   "tags": [],
+   "conclusion": "感觉有点莫名其妙的 看的有点复杂",
+   "steps": 2,
+   "errors": 0,
+   "open": 0,
+   "papers": [],
+   "text": "把文字转变为数字 研究文字是怎么通过代码转换成数字的 读取数据，countVectorizer 全部转小写，根据规则切词，去掉常见虚词 TF-IDF = tf *idf = 这条消息里出现的次数 * 这个词的稀有程度 IDF=ln 1+n/1+df +1 感觉有点莫名其妙的 看的有点复杂",
+   "updatedAt": "2026-10-21T16:17:16.609Z"
+  }
+ ]
 }
