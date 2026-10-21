@@ -6,6 +6,8 @@
   "year": null,
   "venue": "",
   "link": "",
+  "pdf": "",
+  "pdfName": "",
   "tags": [],
   "project": "",
   "readDate": "2026-10-20",
@@ -16,104 +18,145 @@
     {
       "type": "!",
       "page": "1",
-      "text": "纯文本 LLM，输出固定 token"
+      "text": "纯文本 LLM，输出固定 token",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "!",
       "page": "2",
-      "text": "路由器转换 token"
+      "text": "路由器转换 token",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "3",
-      "text": "生成一个缓存，避免输入重复调用大模型"
+      "text": "生成一个缓存，避免输入重复调用大模型",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "4",
-      "text": "流式输出层 支持打断"
+      "text": "流式输出层 支持打断",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "5",
-      "text": "问题是代价高？ 端到端统一训练，LLM 加各模态的转换器 僵化是什么？"
+      "text": "问题是代价高？ 端到端统一训练，LLM 加各模态的转换器 僵化是什么？",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "6",
-      "text": "不止学习存在问题，执行也有问题。"
+      "text": "不止学习存在问题，执行也有问题。",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "7",
-      "text": "trainfree 是指编排层不需要训练，本身用的是训练好的专家模型"
+      "text": "trainfree 是指编排层不需要训练，本身用的是训练好的专家模型",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "方法 1：统一输入，语音经过asr 转成文本查询"
+      "text": "方法 1：统一输入，语音经过asr 转成文本查询",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "图像视频音频 每段输入分配一个证据链 k=模态，片段 id，检验和 传给控制器"
+      "text": "图像视频音频 每段输入分配一个证据链 k=模态，片段 id，检验和 传给控制器",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "视觉专家？ 默认不允许，只有控制器要求才调用"
+      "text": "视觉专家？ 默认不允许，只有控制器要求才调用",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "方法 2 控制器 路由器 专家模型 只输出封闭词表的 token"
+      "text": "方法 2 控制器 路由器 专家模型 只输出封闭词表的 token",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "路由器检验输入的 token 再按映射表找到对应专家模型 不合法则直接拒绝"
+      "text": "路由器检验输入的 token 再按映射表找到对应专家模型 不合法则直接拒绝",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "cache or call 记忆力有证据链K 就直接复用，没有就调用专家 再写进记忆里"
+      "text": "cache or call 记忆力有证据链K 就直接复用，没有就调用专家 再写进记忆里",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "记忆力存专家输出的文字摘要 小内存"
+      "text": "记忆力存专家输出的文字摘要 小内存",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "控制器只能看到压缩以后的视图，再根据指标挑选记录"
+      "text": "控制器只能看到压缩以后的视图，再根据指标挑选记录",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "生成的内容 把查询 取回的记忆 新内容凭借 交给文本生成器写回答"
+      "text": "生成的内容 把查询 取回的记忆 新内容凭借 交给文本生成器写回答",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "token 路由 缓存 输出"
+      "text": "token 路由 缓存 输出",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "方法 3 流式输出+打断"
+      "text": "方法 3 流式输出+打断",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "各文本块做 TTS？ 按块 Id 存放 出现 s.stop 就取消掉用清空缓存 完成的结果才写入记忆"
+      "text": "各文本块做 TTS？ 按块 Id 存放 出现 s.stop 就取消掉用清空缓存 完成的结果才写入记忆",
+      "answer": "",
+      "solve": false
     },
     {
       "type": "?",
       "page": "",
-      "text": "反复询问同一段输出省最多，控专家可以变，可升级，视频长度可以分组"
+      "text": "反复询问同一段输出省最多，控专家可以变，可升级，视频长度可以分组",
+      "answer": "",
+      "solve": false
     }
   ],
+  "solved": "",
   "oneLine": "用 控制器 - 路由器 - 专家模型-组合作为编排层 在输出前预处理数据，提高效率",
   "pain": "实时全模态模型，并且中间的模型组件是可以替换的，并且在重复调用的时候节约性能",
   "idea": "主要就是优化内部的转接器",
@@ -133,5 +176,5 @@
   },
   "reviews": [],
   "createdAt": "2026-10-20T16:50:48.666Z",
-  "updatedAt": "2026-10-20T16:51:42.494Z"
+  "updatedAt": "2026-10-21T14:28:56.019Z"
 }
