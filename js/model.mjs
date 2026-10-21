@@ -78,17 +78,17 @@ export function dayDiff(a, b) {
 export const ID_RE = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{4}$/;
 export const validId = (id) => typeof id === "string" && id.length <= 60 && ID_RE.test(id);
 
-export function slugify(title) {
+export function slugify(title, fallback = "card") {
   const words = String(title || "").toLowerCase().match(/[a-z0-9]+/g) || [];
-  return (words[0] || "card").slice(0, 24);
+  return (words[0] || fallback).slice(0, 24);
 }
 
-export function makeId(date, title, random = Math.random) {
+export function makeId(date, title, random = Math.random, fallback = "card") {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let tail = "";
   for (let i = 0; i < 4; i++) tail += chars[Math.floor(random() * chars.length)];
   const day = validDate(date) ? date : todayISO();
-  return day.replace(/-/g, "") + "-" + slugify(title) + "-" + tail;
+  return day.replace(/-/g, "") + "-" + slugify(title, fallback) + "-" + tail;
 }
 
 /* ---------- cards ---------- */
@@ -295,7 +295,7 @@ export function gradeCard(card, grade, today = todayISO()) {
 }
 
 /* ---------- index ---------- */
-const stripMd = (text) =>
+export const stripMd = (text) =>
   String(text || "")
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")

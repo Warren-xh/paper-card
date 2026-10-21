@@ -85,6 +85,13 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .lock-btn { padding: 4px 9px; font-size: 13px; }
 }
 
+/* Mode switch: paper cards (文献) / practice logs (实操) */
+.mode-switch { display: inline-flex; flex: none; border: 1px solid var(--rule); border-radius: 999px; background: var(--page); padding: 2px; }
+.mode-switch a { text-decoration: none; color: var(--ink-2); font-size: 14px; padding: 3px 12px; border-radius: 999px; white-space: nowrap; }
+.mode-switch a[aria-current="page"] { background: var(--pen); color: var(--page); font-weight: 600; }
+body[data-mode="lab"] .topnav [data-nav="review"] { display: none; }
+@media (max-width: 440px) { .mode-switch a { padding: 3px 9px; } }
+
 main { max-width: 960px; margin: 0 auto; padding: 28px 16px 96px; outline: none; }
 .loading, .empty { color: var(--pencil); }
 
@@ -156,6 +163,21 @@ select.inline { border: 1px solid var(--rule); background: var(--page); border-r
 .due-tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--marker); color: #3a3000; line-height: 1.5; }
 .qbadge { margin-left: auto; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--m0) 16%, var(--page)); color: var(--m0); line-height: 1.5; }
 .untitled { color: var(--pencil); font-style: italic; font-weight: 400; }
+
+/* Practice-log list: rows grouped under month headings */
+.log-list { margin-top: 10px; }
+.week-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 26px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.week-head h2 { font-size: 17px; margin: 0; }
+.week-head .muted { font-size: 13px; }
+.entry-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 14px; padding: 14px 4px; border-bottom: 1px dashed var(--rule); text-decoration: none; color: inherit; border-radius: 4px; }
+.entry-row:hover { background: var(--pen-soft); }
+.entry-row .d { font-family: var(--serif); text-align: right; line-height: 1.1; }
+.entry-row .d b { display: block; font-size: 28px; color: var(--pen); font-variant-numeric: tabular-nums; }
+.entry-row .d small { color: var(--pencil); font-size: 12px; font-family: var(--sans); }
+.entry-row h3 { margin: 0 0 2px; font-size: 17px; }
+.entry-row p { margin: 0; color: var(--ink-2); font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.facts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; font-size: 13px; color: var(--pencil); }
+.facts .tags { color: var(--pen); }
 
 /* Card detail */
 .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; }
@@ -287,6 +309,15 @@ button.mark-sym { cursor: pointer; }
 .mark-kinds button.t0[aria-checked="true"] { border-color: var(--m0); } .mark-kinds button.t1[aria-checked="true"] { border-color: var(--m1); }
 .mark-kinds button.t2[aria-checked="true"] { border-color: var(--m2); } .mark-kinds button.t3[aria-checked="true"] { border-color: var(--m3); }
 .mark-kinds button.t4 b { color: var(--ink-2); } .mark-kinds button.t4[aria-checked="true"] { border-color: var(--ink-2); }
+/* Practice-log step symbols: ▶ 操作 ✗ 报错 ✓ 成功 ? 疑问 ✎ 笔记 */
+.s0 { color: var(--pen); } .s1 { color: var(--warn); } .s2 { color: var(--ok); } .s3 { color: var(--m0); } .s4 { color: var(--ink-2); }
+.mark-kinds button.s0 b { color: var(--pen); } .mark-kinds button.s1 b { color: var(--warn); } .mark-kinds button.s2 b { color: var(--ok); } .mark-kinds button.s3 b { color: var(--m0); } .mark-kinds button.s4 b { color: var(--ink-2); }
+.mark-kinds button.s0[aria-checked="true"] { border-color: var(--pen); } .mark-kinds button.s1[aria-checked="true"] { border-color: var(--warn); } .mark-kinds button.s2[aria-checked="true"] { border-color: var(--ok); }
+.mark-kinds button.s3[aria-checked="true"] { border-color: var(--m0); } .mark-kinds button.s4[aria-checked="true"] { border-color: var(--ink-2); }
+.step-view { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.step-view li { display: grid; grid-template-columns: 44px auto 1fr; gap: 8px; align-items: baseline; }
+.step-view .time { color: var(--pencil); font-size: 13px; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.textarea.code { font-family: var(--mono); font-size: 13.5px; line-height: 1.55; tab-size: 2; white-space: pre; overflow-x: auto; }
 .mark-opts { display: flex; align-items: center; gap: 8px; }
 .solve-flag, .row-flag { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; color: var(--ink-2); }
 .solve-flag { font-size: 14px; padding: 3px 10px 3px 8px; border: 1.5px dashed var(--rule); border-radius: 999px; background: var(--page); }

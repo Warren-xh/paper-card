@@ -2,6 +2,8 @@ import * as M from "./model.mjs";
 import { renderMarkdown, renderInline, escapeHtml as h } from "./markdown.mjs";
 import { GitHubClient } from "./github.mjs";
 import { sealToken, openVault, passwordProblem, validToken } from "./vault.mjs";
+import * as L from "./lab.mjs";
+import { createLab } from "./lab-views.mjs";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -202,8 +204,18 @@ async function loadSite() {
 }
 
 function applySite() {
-  $("#brandName").textContent = state.site.title || "文献卡片";
-  document.title = state.site.title || "文献卡片";
+  const name = document.body.dataset.mode === "lab" ? "实操记录" : state.site.title || "文献卡片";
+  $("#brandName").textContent = name;
+  document.title = name;
+}
+
+// Two modes share one site: paper cards (文献) and practice logs (实操).
+function setMode(mode) {
+  document.body.dataset.mode = mode;
+  $$(".mode-switch a").forEach((a) => (a.dataset.mode === mode ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+  $("#brand").setAttribute("href", mode === "lab" ? "#/lab" : "#/");
+  store.set("pc-mode", mode);
+  applySite();
 }
 
 async function loadIndex() {
@@ -222,6 +234,7 @@ async function loadIndex() {
   state.index = M.normalizeIndex(state.index);
   store.set("pc-recent", fresh);
   updateBadge();
+  await lab.loadLogs();
 }
 
 async function getCard(id) {
@@ -362,6 +375,7 @@ async function ensureUnlocked() {
   if (ok) {
     toast("已解锁，可以编辑了。");
     state.cards.clear();
+    lab.clearCache();
     await loadIndex().catch(() => {});
   }
   return !!ok;
@@ -377,15 +391,20 @@ async function route() {
     return;
   }
   const hash = location.hash.replace(/^#\/?/, "");
-  const [name, arg] = hash.split("/");
-  const view = ROUTES[name] || "home";
+  const [name, arg, arg2] = hash.split("/");
   currentHash = location.hash || "#/";
   editorDirty = false;
   window.onbeforeunload = null;
-  const nav = view === "review" || view === "settings" ? view : view === "setup" ? "settings" : "home";
+  // #/lab, #/lab/new, #/lab/e/<id>, #/lab/edit/<id> are practice logs.
+  const isLab = name === "lab";
+  const view = isLab ? (arg === "e" ? "view" : arg === "edit" || arg === "new" ? "edit" : "home") : ROUTES[name] || "home";
+  const param = isLab ? (arg === "e" || arg === "edit" ? arg2 : "") : name === "new" ? "" : arg;
+  if (isLab) setMode("lab");
+  else if (view !== "settings" && view !== "setup") setMode("cards");
+  const nav = view === "review" || view === "settings" ? view : view === "setup" ? "settings" : "";
   $$(".topnav a").forEach((a) => (a.dataset.nav === nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
   try {
-    await views[view](decodeURIComponent(name === "new" ? "" : arg || ""));
+    await (isLab ? lab : views)[view](decodeURIComponent(param || ""));
   } catch (error) {
     console.error(error);
     main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/">回到首页</a></p></div>`;
@@ -395,6 +414,18 @@ async function route() {
 let currentHash = location.hash;
 let editorDirty = false;
 let leaveEditor = async () => true;
+
+const lab = createLab({
+  state, $, $$, h, renderMarkdown, renderInline, toast, confirmDialog, copyText, typesetMath, store,
+  readData: (path) => readData(path),
+  ensureUnlocked: () => ensureUnlocked(),
+  lock: (expired) => lock(expired),
+  route: () => route(),
+  plainEnter, wrapSelection, shrinkImage: (file) => shrinkImage(file),
+  setDirty: (dirty) => { editorDirty = dirty; },
+  isDirty: () => editorDirty,
+  setLeave: (fn) => { leaveEditor = fn; },
+});
 
 /* Home */
 async function home() {
@@ -618,6 +649,7 @@ async function cardView(id) {
       ${marksHtml(c)}
       ${solvedHtml(c)}
       ${c.notes.trim() ? `<section class="section"><h2>自由笔记</h2><div class="md">${mdOf(null)(c.notes)}</div></section>` : ""}
+      ${lab.relatedHtml(c.id)}
       ${reviewsHtml(c)}
     </article>`;
   const page = $("#cardPage");
@@ -1284,7 +1316,7 @@ async function settingsView() {
     <div class="sheet">
       <h2 style="margin-top:0">备份</h2>
       <p class="muted">所有卡片都保存在 GitHub 仓库 <a href="https://github.com/${h(state.gh.repo)}" target="_blank" rel="noopener">${h(state.gh.repo)}</a> 里，每次发布都有历史记录。也可以随时下载一份。</p>
-      <div class="btn-row"><button class="btn" id="exportMd">下载全部（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
+      <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
     </div>`;
 
   $("#siteForm").onsubmit = async (event) => {
@@ -1313,7 +1345,8 @@ async function settingsView() {
   };
   const titles = () => new Map(state.index.cards.map((x) => [x.id, x.title]));
   $("#exportMd").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".md", (await loadAll()).map((c) => M.cardToMarkdown(c, titles())).join("\n---\n\n"));
-  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll() }, null, 2), "application/json");
+  $("#exportLogs").onclick = async () => download("实操记录-全部-" + M.todayISO() + ".md", (await lab.loadAll()).map((l) => L.logToMarkdown(l, titles())).join("\n---\n\n"));
+  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll() }, null, 2), "application/json");
 }
 
 async function changePassword() {
@@ -1470,6 +1503,7 @@ async function boot() {
     }, true);
   }
   addEventListener("hashchange", route);
+  if (!location.hash && store.get("pc-mode") === "lab") history.replaceState(null, "", "#/lab");
   route();
 }
 
