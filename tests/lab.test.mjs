@@ -83,3 +83,42 @@ test("practice log markdown export", () => {
   assert.match(md, /## 关键代码 \/ 命令\ntorchrun/);
   assert.match(md, /## 相关论文\n- BERT/);
 });
+
+test("uploaded code files: safe paths, skip rules, previews", () => {
+  // Relative paths from a folder upload are cleaned, never escaping the log's folder.
+  assert.equal(L.cleanRelPath("proj/src/train.py"), "proj/src/train.py");
+  assert.equal(L.cleanRelPath("../../data/vault.json"), "data/vault.json");
+  assert.equal(L.cleanRelPath("a/./b//c:d?.py"), "a/b/c_d_.py");
+  assert.equal(L.cleanRelPath("实验/训练 脚本.py"), "实验/训练 脚本.py");
+  assert.equal(L.cleanRelPath("../.."), "");
+  assert.ok(L.validFilePath("code/" + ID + "/proj/train.py"));
+  for (const bad of ["code/" + ID, "code/bad-id/a.py", "code/" + ID + "/../data/vault.json", "data/vault.json", "code/" + ID + "/a\\b.py"])
+    assert.ok(!L.validFilePath(bad), bad);
+  // Dependencies, caches and secrets are skipped; real code folders are not.
+  assert.equal(L.skipReason("proj/node_modules/x/index.js"), "依赖或缓存");
+  assert.equal(L.skipReason("proj/.git/config"), "依赖或缓存");
+  assert.equal(L.skipReason("proj/src/__pycache__/a.pyc"), "依赖或缓存");
+  assert.equal(L.skipReason("proj/.env"), "可能含密钥");
+  assert.equal(L.skipReason("proj/.env.local"), "可能含密钥");
+  assert.equal(L.skipReason("server.pem"), "可能含密钥");
+  assert.equal(L.skipReason("proj/.DS_Store"), "系统文件");
+  assert.equal(L.skipReason("proj/env/cartpole.py"), "");
+  assert.equal(L.skipReason("proj/build/model.py"), "");
+  assert.equal(L.skipReason("proj/environment.yml"), "");
+  // Text files get a preview; notebooks show their cells.
+  assert.ok(L.isTextFile("a/train.py") && L.isTextFile("x.ipynb") && L.isTextFile("p/Dockerfile") && L.isTextFile("requirements.txt"));
+  assert.ok(!L.isTextFile("model.pt") && !L.isTextFile("data.zip"));
+  const nb = { cells: [{ cell_type: "markdown", source: ["# 标题\n", "说明"] }, { cell_type: "code", source: ["import torch\n", "print(1)"] }] };
+  assert.equal(L.notebookText(JSON.stringify(nb)), "# ── markdown ──\n# # 标题\n# 说明\n\nimport torch\nprint(1)");
+  assert.equal(L.formatSize(2048), "2.0 KB");
+  // Files are kept on the log (deduplicated, invalid ones dropped) and counted in the index.
+  const l = L.normalizeLog({ id: ID, title: "t", files: [
+    { path: "code/" + ID + "/train.py", size: 1200 },
+    { path: "code/" + ID + "/train.py", size: 1300 },
+    { path: "data/vault.json", size: 1 },
+  ] });
+  assert.deepEqual(l.files, [{ path: "code/" + ID + "/train.py", size: 1200 }]);
+  assert.equal(L.summarize(l).files, 1);
+  assert.match(L.summarize(l).text, /train\.py/);
+  assert.match(L.logToMarkdown(l), /## 代码文件\n- code\/.+\/train\.py（1\.2 KB）/);
+});

@@ -28,6 +28,66 @@ export const PARTS = Object.freeze([
 ]);
 
 const str = (value, max = 20000) => (typeof value === "string" ? value.slice(0, max) : "");
+
+/* ---------- uploaded code files: code/<log id>/<relative path> ---------- */
+export const CODE_DIR = "code/";
+export const FILE_MAX_BYTES = 25 * 1024 * 1024;
+export const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+export const UPLOAD_MAX_FILES = 200;
+const BAD_CHARS = /[\x00-\x1f\\:*?"<>|]/g;
+const HAS_BAD_CHAR = /[\x00-\x1f\\:*?"<>|]/;
+
+// Cleans one relative path from an upload; "" when nothing usable is left.
+export function cleanRelPath(rel) {
+  return String(rel || "")
+    .split("/")
+    .map((part) => part.replace(BAD_CHARS, "_").trim())
+    .filter((part) => part && part !== "." && part !== "..")
+    .join("/")
+    .slice(0, 240);
+}
+
+export function validFilePath(path) {
+  if (typeof path !== "string" || path.length > 300 || !path.startsWith(CODE_DIR)) return false;
+  const parts = path.slice(CODE_DIR.length).split("/");
+  return parts.length >= 2 && validId(parts[0]) && parts.every((p) => p && p !== "." && p !== ".." && !HAS_BAD_CHAR.test(p));
+}
+
+// Folders and files that should never be uploaded from a project:
+// dependencies, caches, and anything that looks like a secret.
+const SKIP_DIRS = new Set(["node_modules", ".git", "__pycache__", ".venv", "venv", ".idea", ".vscode", ".ipynb_checkpoints", ".mypy_cache", ".pytest_cache", "wandb"]);
+const SECRET_FILE = /^(\.env(\..*)?|.*\.(pem|key|p12|pfx)|id_(rsa|dsa|ecdsa|ed25519)(\.pub)?|\.npmrc|\.pypirc|credentials(\.json)?)$/i;
+export function skipReason(rel) {
+  const parts = String(rel).split("/");
+  const name = parts.at(-1);
+  if (parts.slice(0, -1).some((p) => SKIP_DIRS.has(p))) return "依赖或缓存";
+  if (name === ".DS_Store" || name === "Thumbs.db") return "系统文件";
+  if (SECRET_FILE.test(name)) return "可能含密钥";
+  return "";
+}
+
+// Files shown as text in the browser; everything else is download-only.
+const TEXT_EXT = /\.(py|ipynb|js|mjs|cjs|ts|tsx|jsx|json|jsonl|md|txt|rst|sh|bash|zsh|ps1|bat|ya?ml|toml|cfg|ini|conf|c|cc|cpp|h|hpp|cu|cuh|java|kt|scala|go|rs|rb|php|r|m|jl|sql|html|css|scss|vue|svelte|csv|tsv|tex|bib|lua|swift|dart|proto|xml|gradle|log)$/i;
+const TEXT_NAME = /^(dockerfile|makefile|cmakelists\.txt|requirements.*\.txt|readme|license|\.gitignore)$/i;
+export const isTextFile = (name) => TEXT_EXT.test(name) || TEXT_NAME.test(name.split("/").pop());
+
+// Notebook cells as plain text, so .ipynb previews stay readable.
+export function notebookText(json) {
+  const nb = typeof json === "string" ? JSON.parse(json) : json;
+  return (nb.cells || [])
+    .map((c) => {
+      const src = Array.isArray(c.source) ? c.source.join("") : String(c.source || "");
+      return c.cell_type === "markdown" ? "# ── markdown ──\n" + src.replace(/^/gm, "# ") : src;
+    })
+    .join("\n\n");
+}
+
+export function formatSize(bytes) {
+  if (!(bytes >= 0)) return "";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function nowTime(now = new Date()) {
@@ -58,6 +118,7 @@ export function emptyLog(id = "") {
     results: "",
     next: "",
     papers: [],
+    files: [],
     notes: "",
     createdAt: "",
     updatedAt: "",
@@ -91,6 +152,11 @@ export function normalizeLog(raw) {
   l.conclusion = str(raw.conclusion, 400).trim();
   for (const k of ["fixes", "code", "results", "next"]) l[k] = str(raw[k], 50000);
   l.papers = [...new Set((Array.isArray(raw.papers) ? raw.papers : []).filter(validId))].slice(0, 30);
+  const seen = new Set();
+  l.files = (Array.isArray(raw.files) ? raw.files : [])
+    .filter((f) => f && validFilePath(f.path) && !seen.has(f.path) && seen.add(f.path))
+    .map((f) => ({ path: f.path, size: Number.isFinite(f.size) && f.size >= 0 ? Math.round(f.size) : null }))
+    .slice(0, 500);
   l.notes = str(raw.notes, 50000);
   l.createdAt = str(raw.createdAt, 40);
   l.updatedAt = str(raw.updatedAt, 40);
@@ -104,6 +170,7 @@ export function plainText(l) {
   return [
     l.title, l.project, l.tags.join(" "), l.env, l.goal,
     l.steps.map((s) => s.text + " " + s.answer).join(" "),
+    l.files.map((f) => f.path.split("/").pop()).join(" "),
     l.conclusion, stripMd(l.fixes), stripMd(l.code), stripMd(l.results), stripMd(l.next), stripMd(l.notes),
   ]
     .join(" ")
@@ -125,6 +192,7 @@ export function summarize(l) {
     errors: l.steps.filter((s) => s.type === "✗").length,
     open: openSteps(l).length,
     papers: l.papers,
+    files: l.files.length,
     text: plainText(l).slice(0, 4000),
     updatedAt: l.updatedAt,
   };
@@ -217,6 +285,7 @@ export function logToMarkdown(l, paperTitles = new Map()) {
   sec("关键代码 / 命令", l.code);
   sec("结果", l.results);
   sec("下次要做", l.next);
+  if (l.files.length) out.push("## 代码文件\n" + l.files.map((f) => "- " + f.path + (f.size != null ? "（" + formatSize(f.size) + "）" : "")).join("\n"));
   if (l.papers.length) out.push("## 相关论文\n" + l.papers.map((id) => "- " + (paperTitles.get(id) || id)).join("\n"));
   sec("笔记", l.notes);
   return out.join("\n\n") + "\n";

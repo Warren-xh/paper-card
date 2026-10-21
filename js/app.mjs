@@ -421,7 +421,7 @@ const lab = createLab({
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
   route: () => route(),
-  plainEnter, wrapSelection, shrinkImage: (file) => shrinkImage(file),
+  plainEnter, wrapSelection, fileToBase64, shrinkImage: (file) => shrinkImage(file),
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
   setLeave: (fn) => { leaveEditor = fn; },

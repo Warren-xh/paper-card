@@ -317,6 +317,15 @@ button.mark-sym { cursor: pointer; }
 .step-view { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 .step-view li { display: grid; grid-template-columns: 44px auto 1fr; gap: 8px; align-items: baseline; }
 .step-view .time { color: var(--pencil); font-size: 13px; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 8px; }
+.sec-head h2 { margin: 0; font-size: 18px; }
+.file-edit, .file-view { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.file-edit:not(:empty) { margin-top: 6px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 4px 4px 4px 10px; max-height: 280px; overflow-y: auto; }
+.file-edit li, .file-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fname { font-family: var(--mono); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.file-view > li { border-bottom: 1px dashed var(--rule); padding: 4px 0; }
+.file-pre { margin: 6px 0 4px; max-height: 480px; overflow: auto; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+.file-pre code { font-family: var(--mono); white-space: pre; }
 .textarea.code { font-family: var(--mono); font-size: 13.5px; line-height: 1.55; tab-size: 2; white-space: pre; overflow-x: auto; }
 .mark-opts { display: flex; align-items: center; gap: 8px; }
 .solve-flag, .row-flag { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; color: var(--ink-2); }

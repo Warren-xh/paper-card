@@ -63,6 +63,17 @@ export function createLab(ctx) {
   const md = (images) => (text) => renderMarkdown(text, { shiftHeadings: 2, resolveImage: (src) => images?.[src] || "" });
   const day = (iso) => { const [y, m, d] = iso.split("-").map(Number); return { y, m, d }; };
   const paperOf = (id) => state.index.cards.find((x) => x.id === id);
+  // Uploaded code files are served by the site at their repository path.
+  const fileUrl = (path) => path.split("/").map(encodeURIComponent).join("/");
+  const relOf = (path) => path.replace(/^code\/[^/]+\//, "");
+  async function fileText(path) {
+    const res = await fetch(fileUrl(path) + "?v=" + Date.now(), { cache: "no-store" }).catch(() => null);
+    if (res?.ok) return res.text();
+    // Just uploaded: the site has not rebuilt yet, but GitHub already has it.
+    if (state.gh.unlocked) { const text = await state.gh.readText(path); if (text != null) return text; }
+    throw new Error("暂时读不到这个文件。刚上传的文件要等网站更新（约 1 分钟）。");
+  }
+
   // Pasted code without ``` fences still keeps its indentation.
   const codeMd = (text) => (/```/.test(text) ? text : "```\n" + text.replace(/\n+$/, "") + "\n```");
 
@@ -168,10 +179,49 @@ export function createLab(ctx) {
       sec("过程", steps) +
       sec("问题与解决", fixes) +
       sec("关键代码 / 命令", l.code.trim() ? `<div class="md">${m(codeMd(l.code))}</div>` : "") +
+      filesHtml(l) +
       sec("结果", text(l.results)) +
       sec("下次要做", text(l.next)) +
       sec("相关论文", papers.length ? `<ul class="link-list">${papers.map((p) => `<li><a href="#/c/${h(p.id)}">${h(p.title || p.id)}</a>${p.oneLine ? `<p>${h(p.oneLine)}</p>` : ""}</li>`).join("")}</ul>` : "") +
       sec("笔记", text(l.notes));
+  }
+
+  function filesHtml(l) {
+    if (!l.files.length) return "";
+    const branch = state.site.branch || "main";
+    const total = l.files.reduce((t, f) => t + (f.size || 0), 0);
+    return `<section class="section files-section"><div class="sec-head"><h2>代码文件</h2>
+        <span class="muted small">${l.files.length} 个 · ${L.formatSize(total)} · <a href="https://github.com/${h(state.gh.repo)}/tree/${h(branch)}/code/${h(l.id)}" target="_blank" rel="noopener">在 GitHub 上查看</a></span></div>
+      <ul class="file-view">${l.files.map((f, i) => `<li>
+        <div class="file-row"><span class="fname" title="${h(f.path)}">${h(relOf(f.path))}</span><span class="muted small">${L.formatSize(f.size)}</span>
+          ${L.isTextFile(f.path) ? `<button type="button" class="btn quiet small" data-view-file="${i}" aria-expanded="false">查看</button>` : ""}
+          <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(f.path.split("/").pop())}">下载</a></div>
+        <pre class="file-pre" hidden><code></code></pre></li>`).join("")}</ul></section>`;
+  }
+
+  // "查看" loads a text file on demand and shows it under its row.
+  function bindFiles(root, l) {
+    root.onclick = async (e) => {
+      const btn = e.target.closest("[data-view-file]");
+      if (!btn) return;
+      const f = l.files[+btn.dataset.viewFile];
+      const pre = btn.closest("li").querySelector(".file-pre");
+      const open = pre.hidden;
+      pre.hidden = !open;
+      btn.setAttribute("aria-expanded", String(open));
+      btn.textContent = open ? "收起" : "查看";
+      if (!open || pre.dataset.loaded) return;
+      const code = pre.querySelector("code");
+      code.textContent = "正在读取…";
+      try {
+        let text = await fileText(f.path);
+        if (/\.ipynb$/i.test(f.path)) { try { text = L.notebookText(text); } catch {} }
+        code.textContent = text.length > 300000 ? text.slice(0, 300000) + "\n\n…（文件太长，只显示前 300 KB，完整内容请下载）" : text;
+        pre.dataset.loaded = "1";
+      } catch (error) {
+        code.textContent = error.message;
+      }
+    };
   }
 
   function headHtml(l) {
@@ -202,6 +252,7 @@ export function createLab(ctx) {
       </div>
       <article class="sheet log-page">${headHtml(l)}${bodyHtml(l)}</article>`;
     $("#copyLog").onclick = () => copyText(L.logToMarkdown(l, new Map(state.index.cards.map((x) => [x.id, x.title]))));
+    bindFiles($(".log-page"), l);
     typesetMath(main);
   }
 
@@ -228,8 +279,15 @@ export function createLab(ctx) {
     let log = null;
     let images = {};
     let restored = false;
+    // A new log that already has uploaded code keeps the id its files were stored under.
+    let pendingId = "";
     if (draft && (!existing || (draft.savedAt || "") > (existing.updatedAt || ""))) {
-      try { log = L.normalizeLog({ ...draft.log, id: id || "00000000-new-0000" }); images = draft.images || {}; restored = true; } catch { log = null; }
+      try {
+        log = L.normalizeLog({ ...draft.log, id: id || "00000000-new-0000" });
+        images = draft.images || {};
+        pendingId = isNew && M.validId(draft.pendingId) ? draft.pendingId : "";
+        restored = true;
+      } catch { log = null; }
     }
     if (!log) log = existing ? structuredClone(existing) : L.newLog(M.todayISO());
     const projects = L.projectList(state.logs.logs).map(([p]) => p);
@@ -256,6 +314,11 @@ export function createLab(ctx) {
           <div class="field"><span class="label" id="lstatusLabel">状态</span><div class="seg" role="group" aria-labelledby="lstatusLabel">
             <button type="button" data-status="doing">进行中</button><button type="button" data-status="done">完成</button></div></div>
         </div>
+        <div class="pdf-field"><span class="label">代码文件</span>
+          <div class="btn-row"><button type="button" class="btn small" id="pickFiles">上传文件</button><button type="button" class="btn small" id="pickFolder">上传文件夹</button><span class="muted small" id="uploadState"></span></div>
+          <ul class="file-edit" id="fileList"></ul>
+          <p class="hint small">文件马上存进 GitHub 仓库的 code/ 文件夹，之后在记录页可以查看和下载；同名文件再传会覆盖。仓库是公开的，会自动跳过 .env、密钥文件、node_modules、.git 等。单个文件最大 25 MB，一次最多 200 个文件、共 100 MB。</p>
+          <input type="file" id="filePick" multiple hidden><input type="file" id="folderPick" webkitdirectory multiple hidden></div>
         <datalist id="lprojList">${projects.map((p) => `<option value="${h(p)}">`).join("")}</datalist>
         <datalist id="ltagList">${allTags.map((t) => `<option value="${h(t)}">`).join("")}</datalist>
 
@@ -442,6 +505,76 @@ export function createLab(ctx) {
       }
     };
 
+    // Code files: uploaded to the repository right away so they are never lost.
+    let files = [...log.files];
+    const uploadedPaths = new Set();
+    const codeId = () => {
+      if (!isNew) return id;
+      pendingId ||= L.newLogId(form.date.value || M.todayISO(), form.title.value);
+      return pendingId;
+    };
+    const paintFiles = () => {
+      $("#fileList").innerHTML = files
+        .map((f) => `<li><span class="fname" title="${h(f.path)}">${h(relOf(f.path))}</span><span class="muted small">${L.formatSize(f.size)}</span><button type="button" class="unlink" data-unfile="${h(f.path)}" aria-label="移除">×</button></li>`)
+        .join("");
+    };
+    paintFiles();
+    $("#pickFiles").onclick = () => $("#filePick").click();
+    $("#pickFolder").onclick = () => $("#folderPick").click();
+    const upload = async (event) => {
+      const picked = [...event.target.files];
+      event.target.value = "";
+      if (!picked.length) return;
+      if (!(await ctx.ensureUnlocked())) return;
+      const skipped = [];
+      const chosen = [];
+      let total = 0;
+      for (const f of picked) {
+        const rel = L.cleanRelPath(f.webkitRelativePath || f.name);
+        const why = !rel ? "文件名无效" : L.skipReason(rel) || (f.size > L.FILE_MAX_BYTES ? "超过 25 MB" : "");
+        if (why || chosen.length >= L.UPLOAD_MAX_FILES || total + f.size > L.UPLOAD_MAX_BYTES) { skipped.push(rel || f.name); continue; }
+        total += f.size;
+        chosen.push({ f, rel });
+      }
+      if (!chosen.length) return toast(`没有可上传的文件（跳过了 ${skipped.length} 个：依赖、缓存、密钥或过大）。`, "error");
+      const dir = L.CODE_DIR + codeId() + "/";
+      const buttons = [$("#pickFiles"), $("#pickFolder")];
+      buttons.forEach((b) => (b.disabled = true));
+      $("#uploadState").textContent = `正在上传 ${chosen.length} 个文件（${L.formatSize(total)}）…`;
+      try {
+        const out = [];
+        for (const { f, rel } of chosen) out.push({ path: dir + rel, size: f.size, base64: await ctx.fileToBase64(f) });
+        await state.gh.commitLatest(async () => ({
+          message: `上传代码 ${out.length} 个文件` + (form.title.value ? "：" + form.title.value.slice(0, 50) : ""),
+          files: out.map(({ path, base64 }) => ({ path, base64 })),
+        }));
+        for (const o of out) {
+          uploadedPaths.add(o.path);
+          files = files.filter((x) => x.path !== o.path);
+          files.push({ path: o.path, size: o.size });
+        }
+        files.sort((a, b) => a.path.localeCompare(b.path));
+        paintFiles();
+        changed();
+        toast(`已上传 ${out.length} 个文件` + (skipped.length ? `，跳过 ${skipped.length} 个（依赖、缓存、密钥或过大）` : "") + "。记得点「保存」。");
+      } catch (error) {
+        console.error(error);
+        toast("上传失败：" + error.message, "error");
+      } finally {
+        buttons.forEach((b) => (b.disabled = false));
+        $("#uploadState").textContent = "";
+      }
+    };
+    $("#filePick").onchange = upload;
+    $("#folderPick").onchange = upload;
+    form.addEventListener("click", (e) => {
+      const rm = e.target.closest("[data-unfile]");
+      if (!rm) return;
+      files = files.filter((f) => f.path !== rm.dataset.unfile);
+      paintFiles();
+      changed();
+    });
+
     const collect = () =>
       L.normalizeLog({
         ...log,
@@ -461,6 +594,7 @@ export function createLab(ctx) {
         results: form.results.value,
         next: form.next.value,
         papers,
+        files,
         notes: form.notes.value,
       });
 
@@ -472,7 +606,7 @@ export function createLab(ctx) {
     paintProgress();
 
     let saveTimer;
-    const saveDraft = () => store.set(draftKey, { log: collect(), images, savedAt: new Date().toISOString() });
+    const saveDraft = () => store.set(draftKey, { log: collect(), images, pendingId, savedAt: new Date().toISOString() });
     function changed() {
       ctx.setDirty(true);
       paintProgress();
@@ -504,6 +638,7 @@ export function createLab(ctx) {
       if (preview) {
         const l = collect();
         box.innerHTML = headHtml(l) + bodyHtml(l, images);
+        bindFiles(box, l);
         typesetMath(box);
       }
     }));
@@ -521,11 +656,17 @@ export function createLab(ctx) {
       btn.disabled = true;
       btn.textContent = "正在保存…";
       try {
-        const finalId = isNew ? L.newLogId(draftLog.date || M.todayISO(), draftLog.title) : id;
+        const finalId = isNew ? pendingId || L.newLogId(draftLog.date || M.todayISO(), draftLog.title) : id;
         const l = { ...draftLog, id: finalId };
         const text = l.fixes + l.results + l.next + l.notes;
         const uploads = Object.entries(images).filter(([path]) => text.includes(path));
-        await saveLog(l, (isNew ? "新增实操记录：" : "更新实操记录：") + l.title.slice(0, 60), uploads.map(([path, url]) => ({ path, base64: url.split(",")[1] })));
+        // Code files removed while editing are deleted from the repository too.
+        const kept = new Set(l.files.map((f) => f.path));
+        const stale = [...new Set([...(existing?.files || []).map((f) => f.path), ...uploadedPaths])].filter((p) => !kept.has(p));
+        await saveLog(l, (isNew ? "新增实操记录：" : "更新实操记录：") + l.title.slice(0, 60), [
+          ...uploads.map(([path, url]) => ({ path, base64: url.split(",")[1] })),
+          ...stale.map((path) => ({ path, remove: true })),
+        ]);
         store.del(draftKey);
         ctx.setDirty(false);
         window.onbeforeunload = null;
@@ -552,6 +693,7 @@ export function createLab(ctx) {
             message: "删除实操记录：" + (existing.title || id).slice(0, 60),
             files: [
               { path: L.LOG_DIR + id + ".json", remove: true },
+              ...existing.files.map((f) => ({ path: f.path, remove: true })),
               { path: L.LOGS_INDEX_PATH, text: JSON.stringify(L.removeFromIndex(index, id), null, 1) + "\n" },
             ],
           };

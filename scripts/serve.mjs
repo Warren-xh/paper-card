@@ -122,7 +122,7 @@ http
     const rel = normalize(path).replace(/^\/+/, "");
     if (rel.startsWith("..")) { res.writeHead(403); return res.end(); }
     try {
-      const data = (mock && (rel.startsWith("data/") || rel.startsWith("uploads/") || rel.startsWith("papers/")) && mockStatic(rel)) || (await readFile(join(root, rel)));
+      const data = (mock && (rel.startsWith("data/") || rel.startsWith("uploads/") || rel.startsWith("papers/") || rel.startsWith("code/")) && mockStatic(rel)) || (await readFile(join(root, rel)));
       const type = types[extname(rel)] || "application/octet-stream";
       res.writeHead(200, { "Content-Type": type + (type.startsWith("text/") || type.endsWith("json") ? "; charset=utf-8" : ""), "Cache-Control": "no-store" });
       res.end(data);
