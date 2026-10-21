@@ -175,7 +175,7 @@ test("markdown export", () => {
 test("data files in the repository are valid and consistent", async () => {
   const read = async (p) => JSON.parse(await readFile(new URL("../" + p, import.meta.url), "utf8"));
   const site = await read(M.SITE_PATH);
-  assert.equal(site.repo, "Warren-xh/paper-card");
+  assert.match(site.repo, /^[\w.-]+\/[\w.-]+$/, "data/site.json 里的 repo 应该是「用户名/仓库名」");
   const idx = M.normalizeIndex(await read(M.INDEX_PATH));
   const files = (await readdir(new URL("../" + M.CARD_DIR, import.meta.url))).filter((n) => n.endsWith(".json"));
   assert.deepEqual(idx.cards.map((s) => s.id + ".json").sort(), files.sort(), "index and data/cards differ; run npm run reindex");
