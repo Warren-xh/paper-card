@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "id": "20261021-omnisift-bph5",
+  "title": "OmniSIFT 音视频压缩",
+  "authors": "",
+  "year": 2026,
+  "venue": "",
+  "link": "",
+  "pdf": "papers/20261021-omnisift-e9vm.pdf",
+  "pdfName": "ding26e.pdf",
+  "tags": [],
+  "project": "",
+  "readDate": "2026-10-21",
+  "status": "reading",
+  "doneAt": "",
+  "why": "在精度不变的情况下压缩使用的 token",
+  "marks": [
+    {
+      "type": "✎",
+      "page": "",
+      "text": "音视频输入需要的 token 很多 开销大",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "模态解耦 DyCoke 音频和视频各自压缩 忽略两者之间的语义关联",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "模态堆成 OmniZIp 用音频编码器注意力跳出重要音频 再用音频显著性指导视频修剪",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "×",
+      "page": "",
+      "text": "注意力分散 和 flashattention 不兼容 不是真正意义上的压缩 EchoingPixels 额外加了 decoder",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "视频冗余通过视频判断，但是音频判断需要依赖画面 所以应该由视觉引导音频 因此需要模态不对称，轻量，兼容高效算子",
+      "answer": "给 OminiSIFT 提出的设计指导 先处理视频，本身不能过大，不能依赖注意力分数矩阵",
+      "solve": true
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "模型把输入按 2 秒切成 chunk，包含 2 帧视频 token 和对应音频 token 这个工具再在里面压缩",
+      "answer": "时间小包，两秒的画面 token和声音 token放在一起 一帧有两包，第一包作为参照物，只能自身比较不同，第二帧以第一帧为参考",
+      "solve": true
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "第一阶段：STVP  第一帧平均优化，得到全局向量，每个 token 的得分是与这个均值的余弦",
+      "answer": "余弦：cos=（a·b）/ （｜a｜x｜b｜） 点积 =对应位置相乘再相加 ｜a｜=各数平方再开根号 余弦距离=1-余弦 衡量方向是否一致",
+      "solve": true
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "第二帧每个 token 和第一帧同位置的 token 算余弦距离，各自按保留比例取 top-k",
+      "answer": "不和平均值比 而是和第一帧同位置的方块比 topk 是按分数从高到低取前面 k 个，",
+      "solve": true
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "第二阶段：VGAS 视觉引导音频选择 可训练",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "一层交叉注意力 音频 token 做 Q 视觉 token 做 K/V 8 头内部维度 512",
+      "answer": "q query提出问题 k key 标签 value 是实际携带的信息  3584 维度压缩成 512，需要的是轻量，再把 512 维分成八份，独自做一遍注意力",
+      "solve": true
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "残差连接 保留原始音频语义 打分:两层 MLP 加 sigmoid 给音频 token 打分 取 top-k",
+      "answer": "MLP 基础小型神经网络 为了把 512 维向量变成一个数字  乘以一个矩阵-过一个非线性函数-乘以一个矩阵 sigmod 把数字压到 0-1",
+      "solve": true
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "top-K不可导，用直通估计起 STE 前向时用 0/1 掩码 反向时把梯度近似为 1 进行端到端训练",
+      "answer": "前向传播 得到回答与正确答案相比算出错了多少，得到损失率，反向传播 从损失往回推，算出怎么调整参数损失会变小，训练几万次模型就学会了",
+      "solve": true
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "显存降低 延迟和免训练方法持平 视频约场 计算量节省越明显",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "LLM VGAS Baseline",
+      "answer": "LLM dcoder 是语言模型部分，负责读取 token 生成回答，VGAS 则是开发的小模块，BAseline 是用于对比的参照物",
+      "solve": true
+    },
+    {
+      "type": "?",
+      "page": "",
+      "text": "消融实验 剪枝",
+      "answer": "没去掉其中一个部件 得到的实验数据",
+      "solve": true
+    }
+  ],
+  "solved": "原始视频 = 画面+声音 将画面按区块切分成视觉 token 声音按时间切成音频 token\n每两秒打包为一个 chunk OmniSIFT 作用于删除没用的 token",
+  "oneLine": "开发一个 OmniSIFT 工具来进行修剪以及压缩，在降低 token 使用的情况下导致准确率消耗较少甚至说在某些场景准确率比 baseline 更高",
+  "pain": "",
+  "idea": "以视觉引导音频，单独训练一个中间模型用于压缩和修剪",
+  "proof": {
+    "datasets": "",
+    "baselines": "",
+    "numbers": ""
+  },
+  "doubts": "使用的模型是训练过的，但是作为 baseline 的几个都是免训练的方法，条件不对等\n也有可能是模型本来就更依赖视觉，对音频的依赖不深，没有加以验证",
+  "relevance": "",
+  "links": [],
+  "linkNote": "",
+  "notes": "节约 token 类",
+  "srs": null,
+  "reviews": [],
+  "createdAt": "2026-10-21T13:57:52.162Z",
+  "updatedAt": "2026-10-21T13:57:52.162Z"
+}
