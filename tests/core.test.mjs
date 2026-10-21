@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import * as M from "../js/model.mjs";
 import { renderMarkdown, renderInline } from "../js/markdown.mjs";
 import { sealToken, openVault, passwordProblem } from "../js/vault.mjs";
@@ -57,6 +57,7 @@ test("progress counts the seven parts", () => {
 
 test("first-pass answers resolve questions", () => {
   const c = card({
+    firstPass: true,
     marks: [
       { type: "?", page: "3", text: "CLS 干什么", answer: "做分类" },
       { type: "?", page: "4", text: "为什么 15%" },
@@ -70,6 +71,26 @@ test("first-pass answers resolve questions", () => {
   assert.match(M.summarize(c).text, /做分类.*查了 WordPiece/);
   const md = M.cardToMarkdown(c);
   assert.match(md, /## 初步解决\n- \? CLS 干什么\n {2}→ 做分类\n\n查了 WordPiece/);
+
+  // With the stage switched off, answers are kept but ignored.
+  const off = { ...c, firstPass: false };
+  assert.equal(M.openQuestions(off).length, 2);
+  assert.equal(M.summarize(off).questions, 2);
+  assert.deepEqual(M.marksToLines(off.marks, ["?"], "", false), ["- ? p.3 CLS 干什么", "- ? p.4 为什么 15%"]);
+  assert.doesNotMatch(M.cardToMarkdown(off), /初步解决/);
+  assert.equal(M.normalizeCard({ ...off, id: ID }).marks[0].answer, "做分类");
+  // Off by default; older cards that already have answers count as on.
+  assert.equal(card({}).firstPass, false);
+  assert.equal(card({ marks: [{ type: "?", text: "q", answer: "a" }] }).firstPass, true);
+  assert.equal(card({ firstPass: false, marks: [{ type: "?", text: "q", answer: "a" }] }).firstPass, false);
+});
+
+test("plain notes are a mark type of their own", () => {
+  const c = card({ marks: [{ type: "✎", page: "2", text: "**公式** 在这里" }] });
+  assert.deepEqual(c.marks[0], { type: "✎", page: "2", text: "**公式** 在这里", answer: "" });
+  assert.equal(M.markLabel("✎"), "普通笔记");
+  assert.deepEqual(M.marksToLines(c.marks, ["?", "×", "★"]), []);
+  assert.match(M.cardToMarkdown(c), /- ✎ p.2 \*\*公式\*\* 在这里/);
 });
 
 test("marks are brought into doubts and relevance once", () => {
@@ -152,24 +173,18 @@ test("markdown export", () => {
   assert.match(md, /\n## 自由笔记\n笔记/);
 });
 
-test("bundled data files are valid and consistent", async () => {
+test("data files in the repository are valid and consistent", async () => {
   const read = async (p) => JSON.parse(await readFile(new URL("../" + p, import.meta.url), "utf8"));
   const site = await read(M.SITE_PATH);
-  assert.equal(site.title, "文献卡片");
   assert.equal(site.repo, "Warren-xh/paper-card");
   const idx = M.normalizeIndex(await read(M.INDEX_PATH));
-  assert.ok(idx.cards.length >= 1);
+  const files = (await readdir(new URL("../" + M.CARD_DIR, import.meta.url))).filter((n) => n.endsWith(".json"));
+  assert.deepEqual(idx.cards.map((s) => s.id + ".json").sort(), files.sort(), "index and data/cards differ; run npm run reindex");
   for (const s of idx.cards) {
     const c = M.normalizeCard(await read(M.CARD_DIR + s.id + ".json"));
     const fresh = M.summarize(c);
     assert.deepEqual({ ...s, updatedAt: "" }, { ...fresh, updatedAt: "" }, "index entry out of date for " + s.id + "; run npm run reindex");
   }
-  const bert = M.normalizeCard(await read(M.CARD_DIR + "20261019-bert-demo.json"));
-  assert.equal(bert.status, "done");
-  assert.ok(bert.tags.includes("示例"));
-  assert.equal(M.progressText(bert), "卡片 7/7，写完了");
-  assert.equal(M.openQuestions(bert).length, 1);
-  assert.ok(bert.marks.some((m) => m.answer));
 });
 
 test("markdown renders safely", () => {

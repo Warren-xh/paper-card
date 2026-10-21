@@ -190,7 +190,7 @@ select.inline { border: 1px solid var(--rule); background: var(--page); border-r
 .mark-view .page { color: var(--pencil); font-size: 13px; font-variant-numeric: tabular-nums; flex: none; }
 .mark-sym { flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 800; font-size: 14px; border: 1.5px solid currentColor; background: var(--page); line-height: 1; padding: 0; }
 button.mark-sym { cursor: pointer; }
-.t0 { color: var(--m0); } .t1 { color: var(--m1); } .t2 { color: var(--m2); } .t3 { color: var(--m3); }
+.t0 { color: var(--m0); } .t1 { color: var(--m1); } .t2 { color: var(--m2); } .t3 { color: var(--m3); } .t4 { color: var(--ink-2); }
 .review-log { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; font-size: 14px; }
 .review-log li { display: flex; gap: 12px; font-variant-numeric: tabular-nums; }
 .grade { font-weight: 600; }
@@ -286,6 +286,9 @@ button.mark-sym { cursor: pointer; }
 .mark-kinds button[aria-checked="true"] { border-color: currentColor; color: var(--ink); font-weight: 600; }
 .mark-kinds button.t0[aria-checked="true"] { border-color: var(--m0); } .mark-kinds button.t1[aria-checked="true"] { border-color: var(--m1); }
 .mark-kinds button.t2[aria-checked="true"] { border-color: var(--m2); } .mark-kinds button.t3[aria-checked="true"] { border-color: var(--m3); }
+.mark-kinds button.t4 b { color: var(--ink-2); } .mark-kinds button.t4[aria-checked="true"] { border-color: var(--ink-2); }
+.stage-toggle { font-weight: 600; cursor: pointer; }
+#solveBody { margin-top: 10px; }
 .fmt-pair { display: flex; gap: 4px; }
 .fmt { width: 32px; height: 30px; border: 1px solid var(--rule); background: var(--page); border-radius: var(--radius); cursor: pointer; color: var(--ink-2); font-family: var(--serif); font-size: 15px; padding: 0; }
 .fmt:hover { border-color: var(--pencil); color: var(--ink); }

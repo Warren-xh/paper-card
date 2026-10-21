@@ -551,12 +551,13 @@ function marksHtml(c) {
   if (!c.marks.length) return "";
   return `<section class="section"><h2>阅读标记</h2>
     <ul class="mark-view">${c.marks
-      .map((m) => `<li>${markSym(m.type)}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}${m.type === "?" && m.answer ? ` <span class="solved-tick" title="已初步解决">✓</span>` : ""}</span></li>`)
+      .map((m) => `<li>${markSym(m.type)}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}${c.firstPass && m.type === "?" && m.answer ? ` <span class="solved-tick" title="已初步解决">✓</span>` : ""}</span></li>`)
       .join("")}</ul></section>`;
 }
 
 // First pass: each "?" with the answer found after reading once.
 function solvedHtml(c, images) {
+  if (!c.firstPass) return "";
   const questions = c.marks.filter((m) => m.type === "?");
   if (!questions.length && !c.solved.trim()) return "";
   return `<section class="section"><h2>初步解决</h2>
@@ -758,12 +759,12 @@ async function editView(id) {
     ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，发布时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
     <form class="sheet" id="editor" autocomplete="off">
       <label class="field"><span class="visually-hidden">论文标题</span>
-        <input class="title-input" name="title" maxlength="300" placeholder="论文标题，比如：BERT: Pre-training of Deep Bidirectional Transformers…"></label>
+        <input class="title-input" name="title" maxlength="300" placeholder="论文标题"></label>
       <div class="meta-grid">
-        <label class="field"><span>作者</span><input name="authors" maxlength="300" placeholder="比如 Devlin 等"></label>
-        <label class="field"><span>年份</span><input name="year" type="number" min="1800" max="2200" inputmode="numeric" placeholder="2019"></label>
-        <label class="field"><span>会议 / 期刊</span><input name="venue" maxlength="120" placeholder="比如 NAACL"></label>
-        <label class="field"><span>链接</span><input name="link" maxlength="500" placeholder="网址 / DOI / arXiv:1810.04805"></label>
+        <label class="field"><span>作者</span><input name="authors" maxlength="300" placeholder="作者姓名"></label>
+        <label class="field"><span>年份</span><input name="year" type="number" min="1800" max="2200" inputmode="numeric" placeholder="发表年份"></label>
+        <label class="field"><span>会议 / 期刊</span><input name="venue" maxlength="120" placeholder="会议或期刊名称"></label>
+        <label class="field"><span>链接</span><input name="link" maxlength="500" placeholder="网址、DOI 或 arXiv 编号"></label>
         <label class="field"><span>标签</span><input name="tags" list="tagList" placeholder="用逗号分开"></label>
         <label class="field"><span>项目</span><input name="project" list="projList" maxlength="60" placeholder="可以留空"></label>
         <label class="field"><span>阅读日期</span><input name="readDate" type="date"></label>
@@ -779,7 +780,7 @@ async function editView(id) {
 
       <section class="stage"><h2><span class="stage-n">1</span>读之前</h2>
         <label class="field"><span>为什么读这篇、想从里面得到什么？（一行）</span>
-          <input name="why" maxlength="300" placeholder="比如：想知道预训练 + 微调为什么比从头训练好"></label></section>
+          <input name="why" maxlength="300" placeholder="为什么读这篇，想从中得到什么"></label></section>
 
       <section class="stage"><h2><span class="stage-n">2</span>边读边记</h2>
         <p class="hint">只打标记，不写长句。选一个符号，写几个字，回车就记下一条。页码从 1 开始，翻页时点 ＋（也可以直接改数字，或清空不填）。</p>
@@ -788,24 +789,27 @@ async function editView(id) {
             <div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div>
           <div class="mark-line">
             <div class="page-step"><button type="button" class="step" data-step="-1" aria-label="上一页">−</button><input class="input page" id="markPage" placeholder="页" maxlength="12" inputmode="numeric" aria-label="页码"><button type="button" class="step" data-step="1" aria-label="下一页">＋</button></div>
-            <input class="input" id="markText" maxlength="300" placeholder="几个字就够，回车记下" aria-label="标记内容" enterkeyhint="done">
+            <input class="input" id="markText" maxlength="300" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done">
             <button type="button" class="btn" id="addMark">记下</button></div>
         </div>
         <ol class="marks-list" id="marks"></ol></section>
 
       <section class="stage"><h2><span class="stage-n">3</span>初步解决问题</h2>
-        <p class="hint">读完第一遍，先把标了 ? 的地方简单解决一遍：查资料、问人、回看原文都行。写了答案的 ? 就不再算「没看懂」；还没弄懂的先空着，之后可以「带入」到 ⑤。</p>
-        <p class="small" id="solveCount"></p>
-        <ol class="solve-list" id="solveList"></ol>
-        <label class="field" style="margin-top:12px"><span>其他初步弄懂的</span><textarea class="textarea" name="solved" rows="3" placeholder="比如：查了一下 xx 的意思，原来是……"></textarea></label>
-        ${tools("solved")}</section>
+        <label class="check-row stage-toggle"><input type="checkbox" id="firstPass"> 读完第一遍后，先初步解决标了 ? 的问题</label>
+        <div id="solveBody" hidden>
+          <p class="hint">给每个 ? 写下答案。写了答案的 ? 不再算「没看懂」；没弄懂的留空，之后可以「带入」到 ⑤。</p>
+          <p class="small" id="solveCount"></p>
+          <ol class="solve-list" id="solveList"></ol>
+          <label class="field" style="margin-top:12px"><span>其他初步弄懂的</span><textarea class="textarea" name="solved" rows="3" placeholder="其他读完第一遍弄懂的地方"></textarea></label>
+          ${tools("solved")}
+        </div></section>
 
       <section class="stage"><h2><span class="stage-n">4</span>读完 · 合上论文再写</h2>
         <p class="callout">写的时候不看原文，写不出来的那栏就是没懂的地方。</p>
 
         <div class="esec">${secHead(1, "最重要的一栏。点下面的句式，直接打字填空，按 Tab 跳到下一个空。")}
           <div class="prompts"><button type="button" id="oneLineTpl">用【什么方法】解决了【什么问题】，结果【比谁好多少】</button></div>
-          <textarea class="textarea one" name="oneLine" rows="2" maxlength="400" placeholder="这篇论文用一句话说就是……"></textarea></div>
+          <textarea class="textarea one" name="oneLine" rows="2" maxlength="400" placeholder="用一句话概括这篇论文"></textarea></div>
 
         <div class="esec">${secHead(2, "它要解决什么问题？之前的方法差在哪？")}
           <textarea class="textarea" name="pain" rows="3"></textarea>${tools("pain")}</div>
@@ -832,7 +836,7 @@ async function editView(id) {
           <div class="link-chosen" id="linkChosen"></div>
           ${others.length ? `<div class="link-search"><input class="input" id="linkSearch" placeholder="输入标题、作者或关键词找卡片…" autocomplete="off" aria-label="搜索要关联的卡片"><div class="link-results" id="linkResults"></div></div>` : `<p class="muted small">还没有其他卡片可以关联。</p>`}
           ${back.length ? `<p class="hint small" style="margin-top:6px">这些卡片已经关联了这张，会自动显示在两边，不用再选：${back.map((b) => h(b.title || b.id)).join("、")}</p>` : ""}
-          <textarea class="textarea" name="linkNote" rows="3" placeholder="和它们比，这篇的不同在于……" style="margin-top:8px"></textarea>${tools("linkNote")}</div>
+          <textarea class="textarea" name="linkNote" rows="3" placeholder="这篇和关联论文的区别" style="margin-top:8px"></textarea>${tools("linkNote")}</div>
       </section>
 
       <section class="stage"><h2><span class="stage-n">+</span>自由笔记</h2>
@@ -903,12 +907,19 @@ async function editView(id) {
       ? solveRows.map((r, i) => {
           const page = $("[data-k=page]", r).value.trim();
           return `<li><div class="q">${markSym("?")}${page ? `<span class="page">p.${h(page)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
-            <input class="input" data-solve="${i}" value="${h($("[data-k=answer]", r).value)}" placeholder="简单写下答案；还没弄懂就先空着" aria-label="答案"></li>`;
+            <input class="input" data-solve="${i}" value="${h($("[data-k=answer]", r).value)}" placeholder="这个问题的答案，没弄懂就留空" aria-label="答案"></li>`;
         }).join("")
       : `<li class="muted small">阅读时还没有标记 ?。</li>`;
     paintSolveCount();
   }
   renderSolve();
+  let firstPass = card.firstPass;
+  const paintFirstPass = () => {
+    $("#firstPass").checked = firstPass;
+    $("#solveBody").hidden = !firstPass;
+  };
+  paintFirstPass();
+  $("#firstPass").addEventListener("change", (e) => { firstPass = e.target.checked; paintFirstPass(); });
   $("#solveList").addEventListener("input", (e) => {
     const row = solveRows[e.target.dataset.solve];
     if (row) { $("[data-k=answer]", row).value = e.target.value; paintSolveCount(); }
@@ -973,7 +984,7 @@ async function editView(id) {
     const types = b.dataset.bring === "doubts" ? ["?", "×"] : ["★"];
     b.onclick = () => {
       const area = form[b.dataset.bring];
-      const lines = M.marksToLines(collectMarks(), types, area.value);
+      const lines = M.marksToLines(collectMarks(), types, area.value, firstPass);
       if (!lines.length) return toast(b.dataset.bring === "doubts" ? "没有新的 ? 或 × 标记可以带入。" : "没有新的 ★ 标记可以带入。");
       area.value = (area.value.trim() ? area.value.replace(/\s*$/, "\n") : "") + lines.join("\n") + "\n";
       area.focus();
@@ -1100,6 +1111,7 @@ async function editView(id) {
       status,
       why: form.why.value,
       marks: collectMarks(),
+      firstPass,
       solved: form.solved.value,
       oneLine: form.oneLine.value,
       pain: form.pain.value,
