@@ -110,7 +110,6 @@ export function emptyCard(id = "") {
     doneAt: "",
     why: "",
     marks: [],
-    firstPass: false,
     solved: "",
     oneLine: "",
     pain: "",
@@ -193,13 +192,13 @@ export function normalizeCard(raw) {
       page: str(String(m?.page ?? ""), 12).trim(),
       text: str(m?.text, 300).trim(),
       answer: str(m?.answer, 2000).trim(),
+      // "待解决": the mark gets an answer box in the first-pass solving stage.
+      // Older marks that already have an answer count as flagged.
+      solve: typeof m?.solve === "boolean" ? m.solve : !!str(m?.answer, 2000).trim(),
     }))
     .filter((m) => m.text)
     .slice(0, 200);
   c.solved = str(raw.solved);
-  // The first-pass solving stage is opt-in; cards saved before the switch
-  // existed count as opted in when they already have answers.
-  c.firstPass = typeof raw.firstPass === "boolean" ? raw.firstPass : !!(c.marks.some((m) => m.answer) || c.solved.trim());
   c.oneLine = str(raw.oneLine, 400).trim();
   c.pain = str(raw.pain);
   c.idea = str(raw.idea);
@@ -258,8 +257,9 @@ export function applyStatus(card, today = todayISO()) {
   return c;
 }
 
-// "?" marks not answered in the first-pass solving stage (answers only count while it is on).
-export const openQuestions = (c) => c.marks.filter((m) => m.type === "?" && !(c.firstPass && m.answer));
+// Marks flagged 待解决 that have no answer yet.
+export const openQuestions = (c) => c.marks.filter((m) => m.solve && !m.answer);
+const answered = (m) => m.solve && !!m.answer;
 
 export function isDue(x, today = todayISO()) {
   return x.status === "done" && !!x.due && x.due <= today;
@@ -307,8 +307,8 @@ const stripMd = (text) =>
 export function plainText(c) {
   return [
     c.title, c.authors, c.venue, c.year, c.project, c.tags.join(" "), c.why,
-    c.marks.map((m) => m.text + (c.firstPass ? " " + m.answer : "")).join(" "),
-    c.firstPass ? stripMd(c.solved) : "",
+    c.marks.map((m) => m.text + (m.solve ? " " + m.answer : "")).join(" "),
+    stripMd(c.solved),
     c.oneLine, stripMd(c.pain), stripMd(c.idea),
     c.proof.datasets, c.proof.baselines, c.proof.numbers,
     stripMd(c.doubts), stripMd(c.relevance), stripMd(c.linkNote), stripMd(c.notes),
@@ -419,10 +419,10 @@ export function projectList(summaries) {
 
 /* ---------- editor helpers ---------- */
 // Lines for "带入": marks of the given types not already present in `text`.
-// Questions already answered in the first pass are not doubts any more.
-export function marksToLines(marks, types, text = "", firstPass = true) {
+// Marks already answered in the first pass are not doubts any more.
+export function marksToLines(marks, types, text = "") {
   return marks
-    .filter((m) => types.includes(m.type) && m.text && !(firstPass && m.type === "?" && m.answer) && !text.includes(m.text))
+    .filter((m) => types.includes(m.type) && m.text && !answered(m) && !text.includes(m.text))
     .map((m) => "- " + m.type + " " + (m.page ? "p." + m.page + " " : "") + m.text);
 }
 
@@ -456,11 +456,12 @@ export function cardToMarkdown(c, titles = new Map()) {
   sec("⑦", "关联", links);
   if (c.marks.length)
     out.push("## 阅读标记\n" + c.marks.map((m) => "- " + m.type + " " + (m.page ? "p." + m.page + " " : "") + m.text).join("\n"));
-  if (c.firstPass) {
-    const answered = c.marks.filter((m) => m.type === "?" && m.answer);
-    const solved = [answered.map((m) => "- ? " + m.text + "\n  → " + m.answer).join("\n"), c.solved.trim()].filter(Boolean).join("\n\n");
-    sec("", "初步解决", solved);
-  }
+  const flagged = c.marks.filter((m) => m.solve);
+  const solved = [
+    flagged.map((m) => "- " + m.type + " " + m.text + "\n  → " + (m.answer || "（还没解决）")).join("\n"),
+    c.solved.trim(),
+  ].filter(Boolean).join("\n\n");
+  sec("", "初步解决", solved);
   sec("", "自由笔记", c.notes);
   return out.join("\n\n").replace(/^## {2}/gm, "## ") + "\n";
 }

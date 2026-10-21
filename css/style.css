@@ -287,8 +287,15 @@ button.mark-sym { cursor: pointer; }
 .mark-kinds button.t0[aria-checked="true"] { border-color: var(--m0); } .mark-kinds button.t1[aria-checked="true"] { border-color: var(--m1); }
 .mark-kinds button.t2[aria-checked="true"] { border-color: var(--m2); } .mark-kinds button.t3[aria-checked="true"] { border-color: var(--m3); }
 .mark-kinds button.t4 b { color: var(--ink-2); } .mark-kinds button.t4[aria-checked="true"] { border-color: var(--ink-2); }
-.stage-toggle { font-weight: 600; cursor: pointer; }
-#solveBody { margin-top: 10px; }
+.mark-opts { display: flex; align-items: center; gap: 8px; }
+.solve-flag, .row-flag { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; color: var(--ink-2); }
+.solve-flag { font-size: 14px; padding: 3px 10px 3px 8px; border: 1.5px dashed var(--rule); border-radius: 999px; background: var(--page); }
+.solve-flag:has(input:checked) { border-style: solid; border-color: var(--warn); color: var(--warn); font-weight: 600; }
+.solve-flag input, .row-flag input { width: 16px; height: 16px; margin: 0; accent-color: var(--warn); }
+.row-flag { font-size: 13px; flex: none; }
+.row-flag:has(input:checked) { color: var(--warn); }
+.todo-tag { font-size: 12px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--warn); color: var(--warn); white-space: nowrap; }
+@media (max-width: 440px) { .row-flag span { display: none; } }
 .fmt-pair { display: flex; gap: 4px; }
 .fmt { width: 32px; height: 30px; border: 1px solid var(--rule); background: var(--page); border-radius: var(--radius); cursor: pointer; color: var(--ink-2); font-family: var(--serif); font-size: 15px; padding: 0; }
 .fmt:hover { border-color: var(--pencil); color: var(--ink); }

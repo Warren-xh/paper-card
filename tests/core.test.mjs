@@ -35,7 +35,7 @@ test("normalizeCard cleans input", () => {
   assert.equal(c.link, "");
   assert.deepEqual(c.tags, ["NLP", "预训练"]);
   assert.equal(c.status, "reading");
-  assert.deepEqual(c.marks, [{ type: "?", page: "4", text: "为什么 15%", answer: "" }, { type: "!", page: "", text: "x", answer: "" }]);
+  assert.deepEqual(c.marks, [{ type: "?", page: "4", text: "为什么 15%", answer: "", solve: false }, { type: "!", page: "", text: "x", answer: "", solve: false }]);
   assert.equal(c.pdf, "papers/20261020-bert-ab12.pdf");
   assert.equal(c.pdfName, "bert.pdf");
   for (const bad of ["../index.html", "papers/../data/vault.json", "papers/a.exe", "https://x.com/a.pdf"]) assert.equal(card({ pdf: bad }).pdf, "", bad);
@@ -55,39 +55,38 @@ test("progress counts the seven parts", () => {
   assert.equal(M.progressText(full), "卡片 7/7，写完了");
 });
 
-test("first-pass answers resolve questions", () => {
+test("marks flagged 待解决 are answered in the first pass", () => {
   const c = card({
-    firstPass: true,
     marks: [
-      { type: "?", page: "3", text: "CLS 干什么", answer: "做分类" },
-      { type: "?", page: "4", text: "为什么 15%" },
-      { type: "×", text: "NSP 没用", answer: "ignored for ×" },
+      { type: "?", page: "3", text: "CLS 干什么", solve: true, answer: "做分类" },
+      { type: "?", page: "4", text: "为什么 15%", solve: true },
+      { type: "?", page: "5", text: "没勾的问题" },
+      { type: "★", page: "6", text: "这个方法能借鉴吗", solve: true },
+      { type: "×", text: "NSP 没用" },
     ],
     solved: "查了 WordPiece",
   });
-  assert.deepEqual(M.openQuestions(c).map((m) => m.text), ["为什么 15%"]);
-  assert.equal(M.summarize(c).questions, 1);
-  assert.deepEqual(M.marksToLines(c.marks, ["?", "×"]), ["- ? p.4 为什么 15%", "- × NSP 没用"]);
+  // Only flagged marks without an answer are still open, whatever their symbol.
+  assert.deepEqual(M.openQuestions(c).map((m) => m.text), ["为什么 15%", "这个方法能借鉴吗"]);
+  assert.equal(M.summarize(c).questions, 2);
+  // "带入" skips marks already answered.
+  assert.deepEqual(M.marksToLines(c.marks, ["?", "×"]), ["- ? p.4 为什么 15%", "- ? p.5 没勾的问题", "- × NSP 没用"]);
   assert.match(M.summarize(c).text, /做分类.*查了 WordPiece/);
   const md = M.cardToMarkdown(c);
-  assert.match(md, /## 初步解决\n- \? CLS 干什么\n {2}→ 做分类\n\n查了 WordPiece/);
-
-  // With the stage switched off, answers are kept but ignored.
-  const off = { ...c, firstPass: false };
-  assert.equal(M.openQuestions(off).length, 2);
-  assert.equal(M.summarize(off).questions, 2);
-  assert.deepEqual(M.marksToLines(off.marks, ["?"], "", false), ["- ? p.3 CLS 干什么", "- ? p.4 为什么 15%"]);
-  assert.doesNotMatch(M.cardToMarkdown(off), /初步解决/);
-  assert.equal(M.normalizeCard({ ...off, id: ID }).marks[0].answer, "做分类");
-  // Off by default; older cards that already have answers count as on.
-  assert.equal(card({}).firstPass, false);
-  assert.equal(card({ marks: [{ type: "?", text: "q", answer: "a" }] }).firstPass, true);
-  assert.equal(card({ firstPass: false, marks: [{ type: "?", text: "q", answer: "a" }] }).firstPass, false);
+  assert.match(md, /## 初步解决\n- \? CLS 干什么\n {2}→ 做分类\n- \? 为什么 15%\n {2}→ （还没解决）\n- ★ 这个方法能借鉴吗\n {2}→ （还没解决）\n\n查了 WordPiece/);
+  assert.doesNotMatch(md, /没勾的问题\n {2}→/);
+  // Unflagging keeps the answer but it no longer counts.
+  const unflagged = card({ marks: [{ type: "?", text: "q", answer: "a", solve: false }] });
+  assert.equal(unflagged.marks[0].answer, "a");
+  assert.deepEqual(M.marksToLines(unflagged.marks, ["?"]), ["- ? q"]);
+  // Not flagged by default; older marks that already have an answer count as flagged.
+  assert.equal(card({ marks: [{ type: "?", text: "q" }] }).marks[0].solve, false);
+  assert.equal(card({ marks: [{ type: "?", text: "q", answer: "a" }] }).marks[0].solve, true);
 });
 
 test("plain notes are a mark type of their own", () => {
   const c = card({ marks: [{ type: "✎", page: "2", text: "**公式** 在这里" }] });
-  assert.deepEqual(c.marks[0], { type: "✎", page: "2", text: "**公式** 在这里", answer: "" });
+  assert.deepEqual(c.marks[0], { type: "✎", page: "2", text: "**公式** 在这里", answer: "", solve: false });
   assert.equal(M.markLabel("✎"), "普通笔记");
   assert.deepEqual(M.marksToLines(c.marks, ["?", "×", "★"]), []);
   assert.match(M.cardToMarkdown(c), /- ✎ p.2 \*\*公式\*\* 在这里/);
@@ -142,7 +141,7 @@ test("grading follows 1 → 7 → 30 → 90 → 180 days", () => {
 
 test("index, due queue, backlinks, search and stats", () => {
   const a = M.applyStatus(card({ id: "20261010-gpt-aaaa", title: "GPT", readDate: "2026-10-10", status: "done", oneLine: "单向猜下一个词", tags: ["NLP"] }), "2026-10-10");
-  const b = card({ id: "20261015-bert-bbbb", title: "BERT", readDate: "2026-10-15", links: ["20261010-gpt-aaaa"], marks: [{ type: "?", text: "不懂" }, { type: "?", text: "也不懂" }, { type: "?", text: "懂了", answer: "嗯" }], project: "毕设", pdf: "papers/20261015-bert-bbbb.pdf" });
+  const b = card({ id: "20261015-bert-bbbb", title: "BERT", readDate: "2026-10-15", links: ["20261010-gpt-aaaa"], marks: [{ type: "?", text: "不懂", solve: true }, { type: "?", text: "也不懂", solve: true }, { type: "?", text: "懂了", answer: "嗯" }, { type: "?", text: "没勾" }], project: "毕设", pdf: "papers/20261015-bert-bbbb.pdf" });
   let idx = M.emptyIndex();
   idx = M.upsertIndex(idx, a);
   idx = M.upsertIndex(idx, b);

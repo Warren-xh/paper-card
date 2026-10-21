@@ -414,7 +414,7 @@ async function home() {
         <span class="stat"><b>${s.done}</b>篇读完 · ${s.reading} 篇在读</span>
         <span class="stat"><b>${s.thisMonth}</b>篇本月</span>
         <span class="stat"><b>${s.reviews}</b>次回顾</span>
-        ${s.questions ? `<span class="stat"><b>${s.questions}</b>个 ? 还没解决</span>` : ""}
+        ${s.questions ? `<span class="stat"><b>${s.questions}</b>条待解决</span>` : ""}
       </div>`
     : "";
 
@@ -430,7 +430,7 @@ async function home() {
         <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <span class="visually-hidden">搜索卡片</span><input type="search" id="q" placeholder="搜索标题、作者、一句话、笔记…" value="${h(state.filter.query)}"></label>
         <label><span class="visually-hidden">按状态筛选</span><select class="inline" id="status">
-          ${[["", "全部状态"], ["reading", "在读"], ["done", "读完"], ["questions", "有 ? 没解决"]].map(([v, t]) => `<option value="${v}"${state.filter.status === v ? " selected" : ""}>${t}</option>`).join("")}
+          ${[["", "全部状态"], ["reading", "在读"], ["done", "读完"], ["questions", "有待解决的"]].map(([v, t]) => `<option value="${v}"${state.filter.status === v ? " selected" : ""}>${t}</option>`).join("")}
         </select></label>
         ${projectSelect()}
       </div>
@@ -489,7 +489,7 @@ function tileHtml(x, today) {
       <span class="status s-${x.status}">${M.STATUS_LABELS[x.status]}</span>
       ${M.isDue(x, today) ? `<span class="due-tag">该回顾</span>` : ""}
       ${x.pdf ? `<span class="pdf-tag" title="附有论文 PDF">PDF</span>` : ""}
-      ${x.questions ? `<span class="qbadge" title="还有 ${x.questions} 个 ? 没解决">? ${x.questions}</span>` : ""}
+      ${x.questions ? `<span class="qbadge" title="还有 ${x.questions} 条待解决">待解决 ${x.questions}</span>` : ""}
     </div>
     <p class="pcard-one">${x.oneLine ? h(x.oneLine) : '<span class="untitled">还没写一句话</span>'}</p>
     <div class="pcard-paper"><h3>${x.title ? h(x.title) : '<span class="untitled">未写标题</span>'}</h3>
@@ -551,18 +551,17 @@ function marksHtml(c) {
   if (!c.marks.length) return "";
   return `<section class="section"><h2>阅读标记</h2>
     <ul class="mark-view">${c.marks
-      .map((m) => `<li>${markSym(m.type)}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}${c.firstPass && m.type === "?" && m.answer ? ` <span class="solved-tick" title="已初步解决">✓</span>` : ""}</span></li>`)
+      .map((m) => `<li>${markSym(m.type)}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}${m.solve ? (m.answer ? ` <span class="solved-tick" title="已初步解决">✓</span>` : ` <span class="todo-tag">待解决</span>`) : ""}</span></li>`)
       .join("")}</ul></section>`;
 }
 
-// First pass: each "?" with the answer found after reading once.
+// First pass: each mark flagged 待解决 with the answer found after reading once.
 function solvedHtml(c, images) {
-  if (!c.firstPass) return "";
-  const questions = c.marks.filter((m) => m.type === "?");
+  const questions = c.marks.filter((m) => m.solve);
   if (!questions.length && !c.solved.trim()) return "";
   return `<section class="section"><h2>初步解决</h2>
     ${questions.length ? `<ul class="solve-view">${questions
-      .map((m) => `<li><div class="q">${markSym("?")}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}</span></div>
+      .map((m) => `<li><div class="q">${markSym(m.type)}${m.page ? `<span class="page">p.${h(m.page)}</span>` : ""}<span>${renderInline(m.text)}</span></div>
         <div class="a">${m.answer ? renderInline(m.answer) : '<span class="muted">还没解决</span>'}</div></li>`)
       .join("")}</ul>` : ""}
     ${c.solved.trim() ? `<div class="md">${mdOf(images)(c.solved)}</div>` : ""}</section>`;
@@ -783,10 +782,10 @@ async function editView(id) {
           <input name="why" maxlength="300" placeholder="为什么读这篇，想从中得到什么"></label></section>
 
       <section class="stage"><h2><span class="stage-n">2</span>边读边记</h2>
-        <p class="hint">只打标记，不写长句。选一个符号，写几个字，回车就记下一条。页码从 1 开始，翻页时点 ＋（也可以直接改数字，或清空不填）。</p>
+        <p class="hint">只打标记，不写长句。选一个符号，写几个字，回车就记下一条。页码从 1 开始，翻页时点 ＋（也可以直接改数字，或清空不填）。觉得这一条还没解决，就勾上「待解决」，它会出现在下面的「初步解决」里。</p>
         <div class="mark-input">
           <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="标记类型">${M.MARKS.map((m, k) => `<button type="button" role="radio" class="t${k}" data-type="${m.type}" aria-checked="${k === 0}"><b>${m.type}</b>${m.label}</button>`).join("")}</div>
-            <div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div>
+            <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div></div>
           <div class="mark-line">
             <div class="page-step"><button type="button" class="step" data-step="-1" aria-label="上一页">−</button><input class="input page" id="markPage" placeholder="页" maxlength="12" inputmode="numeric" aria-label="页码"><button type="button" class="step" data-step="1" aria-label="下一页">＋</button></div>
             <input class="input" id="markText" maxlength="300" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done">
@@ -795,9 +794,8 @@ async function editView(id) {
         <ol class="marks-list" id="marks"></ol></section>
 
       <section class="stage"><h2><span class="stage-n">3</span>初步解决问题</h2>
-        <label class="check-row stage-toggle"><input type="checkbox" id="firstPass"> 读完第一遍后，先初步解决标了 ? 的问题</label>
-        <div id="solveBody" hidden>
-          <p class="hint">给每个 ? 写下答案。写了答案的 ? 不再算「没看懂」；没弄懂的留空，之后可以「带入」到 ⑤。</p>
+        <div id="solveBody">
+          <p class="hint">「边读边记」里勾了「待解决」的标记列在这里。读完第一遍后给它们写答案；没弄懂的留空，之后可以「带入」到 ⑤。</p>
           <p class="small" id="solveCount"></p>
           <ol class="solve-list" id="solveList"></ol>
           <label class="field" style="margin-top:12px"><span>其他初步弄懂的</span><textarea class="textarea" name="solved" rows="3" placeholder="其他读完第一遍弄懂的地方"></textarea></label>
@@ -825,7 +823,7 @@ async function editView(id) {
           </div></div>
 
         <div class="esec">${secHead(5, "哪里没看懂、哪里站不住、哪些情况它不适用。")}
-          <div class="prompts"><button type="button" data-bring="doubts">带入还没解决的 ? 和 ×</button></div>
+          <div class="prompts"><button type="button" data-bring="doubts">带入阅读时的 ? 和 ×（已解决的不带）</button></div>
           <textarea class="textarea" name="doubts" rows="4"></textarea>${tools("doubts")}</div>
 
         <div class="esec">${secHead(6, "我能借鉴什么？对我的研究有什么用？")}
@@ -868,7 +866,7 @@ async function editView(id) {
   let markType = M.MARKS[0].type;
   const typeIndex = (t) => M.MARKS.findIndex((m) => m.type === t);
   const markRow = (m) =>
-    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><input class="input" data-k="text" value="${h(m.text)}" aria-label="标记内容"><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><button type="button" class="x" aria-label="删除">×</button></li>`;
+    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><input class="input" data-k="text" value="${h(m.text)}" aria-label="标记内容"><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「初步解决」里"><input type="checkbox" data-k="solve"${m.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
   $("#marks").innerHTML = card.marks.map(markRow).join("");
   const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === markType)));
   $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { markType = b.dataset.type; paintTypes(); $("#markText").focus(); }));
@@ -882,8 +880,9 @@ async function editView(id) {
   const addMark = () => {
     const text = $("#markText").value.trim();
     if (!text) return $("#markText").focus();
-    $("#marks").insertAdjacentHTML("beforeend", markRow({ type: markType, page: $("#markPage").value.trim(), text }));
+    $("#marks").insertAdjacentHTML("beforeend", markRow({ type: markType, page: $("#markPage").value.trim(), text, solve: $("#markSolve").checked }));
     $("#markText").value = "";
+    $("#markSolve").checked = false; // flag each unsolved mark on its own
     $("#markText").focus();
     renderSolve();
     changed();
@@ -895,31 +894,24 @@ async function editView(id) {
     else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); stepPage(e.key === "ArrowUp" ? 1 : -1); }
   });
 
-  // First pass: one answer box per "?" mark, stored on the mark itself.
+  // First pass: one answer box per mark flagged 待解决, stored on the mark itself.
   let solveRows = [];
   const paintSolveCount = () => {
     const open = solveRows.filter((r) => !$("[data-k=answer]", r).value.trim()).length;
-    $("#solveCount").textContent = solveRows.length ? (open ? `还有 ${open} 个 ? 没解决，已解决 ${solveRows.length - open} 个。` : `${solveRows.length} 个 ? 都初步解决了。`) : "";
+    $("#solveCount").textContent = solveRows.length ? (open ? `还有 ${open} 条待解决，已解决 ${solveRows.length - open} 条。` : `${solveRows.length} 条都初步解决了。`) : "";
   };
   function renderSolve() {
-    solveRows = $$("#marks [data-row]").filter((r) => $(".mark-sym", r).dataset.type === "?");
+    solveRows = $$("#marks [data-row]").filter((r) => $("[data-k=solve]", r).checked);
     $("#solveList").innerHTML = solveRows.length
       ? solveRows.map((r, i) => {
           const page = $("[data-k=page]", r).value.trim();
-          return `<li><div class="q">${markSym("?")}${page ? `<span class="page">p.${h(page)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
+          return `<li><div class="q">${markSym($(".mark-sym", r).dataset.type)}${page ? `<span class="page">p.${h(page)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
             <input class="input" data-solve="${i}" value="${h($("[data-k=answer]", r).value)}" placeholder="这个问题的答案，没弄懂就留空" aria-label="答案"></li>`;
         }).join("")
-      : `<li class="muted small">阅读时还没有标记 ?。</li>`;
+      : `<li class="muted small">还没有勾「待解决」的标记。</li>`;
     paintSolveCount();
   }
   renderSolve();
-  let firstPass = card.firstPass;
-  const paintFirstPass = () => {
-    $("#firstPass").checked = firstPass;
-    $("#solveBody").hidden = !firstPass;
-  };
-  paintFirstPass();
-  $("#firstPass").addEventListener("change", (e) => { firstPass = e.target.checked; paintFirstPass(); });
   $("#solveList").addEventListener("input", (e) => {
     const row = solveRows[e.target.dataset.solve];
     if (row) { $("[data-k=answer]", row).value = e.target.value; paintSolveCount(); }
@@ -984,7 +976,7 @@ async function editView(id) {
     const types = b.dataset.bring === "doubts" ? ["?", "×"] : ["★"];
     b.onclick = () => {
       const area = form[b.dataset.bring];
-      const lines = M.marksToLines(collectMarks(), types, area.value, firstPass);
+      const lines = M.marksToLines(collectMarks(), types, area.value);
       if (!lines.length) return toast(b.dataset.bring === "doubts" ? "没有新的 ? 或 × 标记可以带入。" : "没有新的 ★ 标记可以带入。");
       area.value = (area.value.trim() ? area.value.replace(/\s*$/, "\n") : "") + lines.join("\n") + "\n";
       area.focus();
@@ -1094,7 +1086,7 @@ async function editView(id) {
   };
 
   const collectMarks = () =>
-    $$("#marks [data-row]").map((r) => ({ type: $(".mark-sym", r).dataset.type, page: $("[data-k=page]", r).value, text: $("[data-k=text]", r).value, answer: $("[data-k=answer]", r).value }));
+    $$("#marks [data-row]").map((r) => ({ type: $(".mark-sym", r).dataset.type, page: $("[data-k=page]", r).value, text: $("[data-k=text]", r).value, answer: $("[data-k=answer]", r).value, solve: $("[data-k=solve]", r).checked }));
   const collect = () =>
     M.normalizeCard({
       ...card,
@@ -1111,7 +1103,6 @@ async function editView(id) {
       status,
       why: form.why.value,
       marks: collectMarks(),
-      firstPass,
       solved: form.solved.value,
       oneLine: form.oneLine.value,
       pain: form.pain.value,

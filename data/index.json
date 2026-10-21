@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-10-21T09:59:44.913Z",
+ "updatedAt": "2026-10-21T10:59:02.528Z",
  "cards": [
   {
    "id": "20261020-training-emo3",
@@ -13,7 +13,7 @@
    "readDate": "2026-10-20",
    "status": "done",
    "oneLine": "用 控制器 - 路由器 - 专家模型-组合作为编排层 在输出前预处理数据，提高效率",
-   "questions": 18,
+   "questions": 0,
    "pdf": false,
    "marks": 20,
    "filled": 6,
