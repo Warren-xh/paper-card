@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v3.1** ([changelog](CHANGELOG.md)). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v3.1** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -22,6 +22,7 @@ Current version: **v3.1** ([changelog](CHANGELOG.md)). The interface is in Chine
 - [How the password works](#how-the-password-works)
 - [Where your data lives](#where-your-data-lives)
 - [Local development](#local-development)
+- [License](#license)
 
 ---
 
@@ -154,7 +155,7 @@ Then continue with “Step 4: Turn on GitHub Pages” and the first-time setup.
 Your content lives in `data/`, `papers/`, `code/` and `uploads/`. When updating, **replace only the code and leave those folders alone**:
 
 1. Download and unzip the new release package.
-2. Upload these to your repository, replacing the old ones: `index.html`, `css/`, `js/`, `scripts/`, `tests/`, `package.json`, `README.md`, `README.en.md`, `CHANGELOG.md`.
+2. Upload these to your repository, replacing the old ones: `index.html`, `css/`, `js/`, `scripts/`, `tests/`, `package.json`, `README.md`, `README.en.md`, `CHANGELOG.md`, `LICENSE`.
 3. **Don't** upload the package's `data/` folder — it is empty and would overwrite your indexes.
 
 With git: copy the files above into your repository folder, commit and push.
@@ -249,3 +250,11 @@ Main files:
 | `js/github.mjs` | One commit per save through the Git Data API, retried on conflicts |
 | `js/vault.mjs` | Token encryption |
 | `js/markdown.mjs` | Safe Markdown rendering |
+
+---
+
+## License
+
+The website code is released under the [MIT License](LICENSE), copyright © 2026 Warren-xh. You may use, copy, modify and distribute it, including commercially, as long as the copyright notice and license text stay with your copies. The software is provided “as is”, without warranty of any kind.
+
+The MIT License covers the website code only. The author's personal content in `data/`, `papers/`, `code/` and `uploads/` of this repository is **not** covered; uploaded paper PDFs remain the property of their authors and publishers. Whatever you write on your own deployment belongs to you.

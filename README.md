@@ -4,7 +4,7 @@
 
 一个放在 GitHub Pages 上的个人学习网站：读论文写**论文卡片**，写代码、跑实验写**实操记录**，再用**思维导图**把它们串起来。不需要服务器、不需要数据库、不用花钱；在任何设备上输入密码就能写，保存后网站约 1 分钟自动更新。
 
-当前版本：**v3.1**（[版本记录](CHANGELOG.md)）· 界面默认中文，可切换英文。
+当前版本：**v3.1**（[版本记录](CHANGELOG.md)）· 界面默认中文，可切换英文 · [MIT 许可证](LICENSE)。
 
 > **注意**：本仓库根目录下的 `data/`、`papers/`、`code/`、`uploads/` 是作者自己的内容。想部署自己的网站，请下载下面的**发布包**，不要直接复制或 Fork 整个仓库。
 
@@ -22,6 +22,7 @@
 - [密码是怎么工作的](#密码是怎么工作的)
 - [数据存在哪里](#数据存在哪里)
 - [本地开发](#本地开发)
+- [许可证](#许可证)
 
 ---
 
@@ -153,7 +154,7 @@ git push -u origin main
 你的内容都在 `data/`、`papers/`、`code/`、`uploads/` 里，更新时**只换代码，不动这些文件夹**：
 
 1. 下载新版本的发布包并解压。
-2. 在你的仓库里上传并覆盖这些：`index.html`、`css/`、`js/`、`scripts/`、`tests/`、`package.json`、`README.md`、`README.en.md`、`CHANGELOG.md`。
+2. 在你的仓库里上传并覆盖这些：`index.html`、`css/`、`js/`、`scripts/`、`tests/`、`package.json`、`README.md`、`README.en.md`、`CHANGELOG.md`、`LICENSE`。
 3. **不要**上传发布包里的 `data/` 文件夹（里面是空白数据，会覆盖你的索引）。
 
 用 git 的话：把新版本的上述文件复制进你的仓库目录，提交并推送即可。
@@ -248,3 +249,11 @@ npm run reindex       # 手动改过 data/cards/ 后重建 data/index.json
 | `js/github.mjs` | 通过 Git Data API 一次提交多个文件，冲突自动重试 |
 | `js/vault.mjs` | 令牌加密 |
 | `js/markdown.mjs` | 安全的 Markdown 渲染 |
+
+---
+
+## 许可证
+
+网站代码以 [MIT 许可证](LICENSE) 发布，版权所有 © 2026 Warren-xh。你可以自由使用、复制、修改、分发，也可以用于商业用途，只需在副本中保留版权声明和许可证文本。软件按「原样」提供，不附带任何担保。
+
+MIT 许可证只适用于网站代码。本仓库 `data/`、`papers/`、`code/`、`uploads/` 里是作者的个人内容，**不在**许可范围内；其中上传的论文 PDF 版权归原作者和出版方所有。你部署后写进自己网站的内容，版权归你自己。

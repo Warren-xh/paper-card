@@ -11,6 +11,8 @@ Release packages of every version are on [Releases](https://github.com/Warren-xh
   Settings shows the version and a link to the project.
 - 中英文 README，写明完整部署步骤；发布包放到 Releases，提供固定下载链接。
   Chinese and English READMEs with full deployment steps; release packages on Releases with a stable download link.
+- 网站代码以 MIT 许可证发布（版权人 Warren-xh），个人内容不在许可范围内。
+  The website code is released under the MIT License (copyright Warren-xh); personal content is not covered.
 
 ## v3.0 — 2026-10-22
 

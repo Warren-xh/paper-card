@@ -1,6 +1,7 @@
 {
   "name": "paper-card",
   "version": "3.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "engines": { "node": ">=18" },
