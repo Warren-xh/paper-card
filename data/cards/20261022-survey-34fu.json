@@ -61,26 +61,68 @@
       "type": "×",
       "page": "",
       "text": "编码器类型：BERT 擅长理解上下文，用于分类抽取， 解码器：gpt 系列 多模态：文字图像等",
-      "answer": "",
+      "answer": "根据上下文预测后一段，先大规模训练再微调",
       "solve": true
+    },
+    {
+      "type": "★",
+      "page": "1",
+      "text": "减灾运用:论文最少 编码器提取信息，解码器生成提示和回答问题",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "1",
+      "text": "备灾：提升公众，灾害预测，风险评估，自动生成预警文本，提供逃生方案",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "1",
+      "text": "响应：论文最多 多模型集成，加 adapter 微调，主动学习减少标注量。灾情严重度评估，描述生产",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "信息协调：有用性打分，信息分类和标注，零样本或者少样本提示",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "恢复 影响评估 用 BERT 帖子和新闻的损毁程度 打分，抽取死亡人数",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "通用模型为主，没有专门框架 阶段不均衡，数据集构建，部署难，统一评测",
+      "answer": "",
+      "solve": false
     }
   ],
   "solved": "",
-  "oneLine": "",
-  "pain": "",
-  "idea": "",
+  "oneLine": "介绍了灾害的各阶段类型，模型在各种情况下的用法，以及作者的认知和点评",
+  "pain": "解决了之前没有一个导读或者说总结的缺口，可以作为入门地图查找工作和数据\n",
+  "idea": "各类局限",
   "proof": {
     "datasets": "",
     "baselines": "",
     "numbers": ""
   },
-  "doubts": "",
-  "relevance": "",
+  "doubts": "只覆盖现成的 LLM 应用，不含人为灾害，没有比较模型规模效率和性能\n数据只收录公开的",
+  "relevance": "数据集分类\tCrisisLexT6（6 个事件）、CrisisLexT26、CrisisNLP（19 个事件）、CrisisMMD（约 1.6 万条带图推文）、Multi-Crisis（53 个事件）、CrisisBench（整合 9 个数据集）、HumAID（约 7.7 万条推文）、TREC Incident Streams（约 2 万条）、Eyewitness Messages（约 1.4 万条）等 估计\tDid You Feel It（约 75 万份地震体感问卷）、FloodDepth（150 张照片）、Behavioral Facilitation 抽取\tDisasterMM",
   "links": [],
   "linkNote": "",
   "notes": "",
   "srs": null,
   "reviews": [],
   "createdAt": "2026-10-22T14:27:15.891Z",
-  "updatedAt": "2026-10-22T14:27:15.891Z"
+  "updatedAt": "2026-10-22T17:04:41.916Z"
 }
