@@ -109,8 +109,15 @@ if (mock) await seed();
 
 http
   .createServer(async (req, res) => {
-    const url = new URL(req.url, "http://localhost");
-    let path = decodeURIComponent(url.pathname);
+    // Malformed addresses (like "//" or "%E0") get a 400 instead of crashing the server.
+    let url, path;
+    try {
+      url = new URL(req.url.replace(/^\/+/, "/"), "http://localhost");
+      path = decodeURIComponent(url.pathname);
+    } catch {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      return res.end("Bad request");
+    }
     if (mock && path.startsWith("/__mock_github")) {
       if (req.method === "OPTIONS") {
         res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,POST,PATCH" });

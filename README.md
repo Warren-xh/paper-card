@@ -92,7 +92,7 @@
 
 ## 备份
 
-`backup/` 文件夹里有 v1.0 版本的完整网站压缩包和部署说明，以后要重新部署或恢复就用它，见 [backup/README.md](backup/README.md)。
+`backup/` 文件夹里有各版本（v1.0、v2.0）的完整网站压缩包和部署说明，以后要重新部署或恢复就用它，见 [backup/README.md](backup/README.md)。
 
 ## 本地开发
 
