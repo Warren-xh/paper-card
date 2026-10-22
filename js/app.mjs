@@ -5,6 +5,12 @@ import { sealToken, openVault, passwordProblem, validToken } from "./vault.mjs";
 import * as L from "./lab.mjs";
 import { createLab } from "./lab-views.mjs";
 import { createMaps } from "./map-views.mjs";
+import { startTranslation, getLang, setLang, LANGS } from "./i18n.mjs";
+
+export const VERSION = "3.1";
+const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
+// Interface language: Chinese by default; English swaps interface text as it appears.
+const T = startTranslation();
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -208,7 +214,7 @@ function applySite() {
   const mode = document.body.dataset.mode;
   const name = mode === "lab" ? "实操记录" : mode === "map" ? "思维导图" : state.site.title || "文献卡片";
   $("#brandName").textContent = name;
-  document.title = name;
+  document.title = T(name);
 }
 
 // Two modes share one site: paper cards (文献) and practice logs (实操).
@@ -1346,7 +1352,14 @@ async function settingsView() {
       <h2 style="margin-top:0">备份</h2>
       <p class="muted">所有卡片都保存在 GitHub 仓库 <a href="https://github.com/${h(state.gh.repo)}" target="_blank" rel="noopener">${h(state.gh.repo)}</a> 里，每次发布都有历史记录。也可以随时下载一份。</p>
       <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
+    </div>
+    <div class="sheet">
+      <h2 style="margin-top:0">界面语言</h2>
+      <p class="muted small">只翻译界面，你写的内容不会被翻译。</p>
+      <div class="seg" role="group" aria-label="界面语言">${Object.entries(LANGS).map(([k, label]) => `<button type="button" data-lang="${k}" aria-pressed="${getLang() === k}" data-no-tr>${label}</button>`).join("")}</div>
+      <p class="muted small" style="margin:18px 0 0">版本 ${VERSION} · <a href="${PROJECT_URL}" target="_blank" rel="noopener">源代码与部署说明</a></p>
     </div>`;
+  $$("[data-lang]").forEach((b) => (b.onclick = () => { if (b.dataset.lang !== getLang()) { setLang(b.dataset.lang); location.reload(); } }));
 
   $("#siteForm").onsubmit = async (event) => {
     event.preventDefault();
@@ -1496,6 +1509,10 @@ async function setupView() {
 
 /* ---------- boot ---------- */
 async function boot() {
+  // The language button shows the language you can switch to.
+  const langBtn = $("#langBtn");
+  langBtn.textContent = getLang() === "en" ? "中" : "EN";
+  langBtn.onclick = () => { setLang(getLang() === "en" ? "zh" : "en"); location.reload(); };
   $("#themeBtn").onclick = () => {
     const root = document.documentElement;
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;

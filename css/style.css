@@ -75,6 +75,15 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .icon-btn { border: 0; background: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--radius); cursor: pointer; color: var(--ink-2); flex: none; }
 .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .icon-btn:hover { background: var(--pen-soft); }
+.lang-btn { font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em; }
+@media (max-width: 440px) {
+  .lang-btn { display: none; }
+  /* English words are longer: keep the top bar on one line on phones. */
+  html[lang="en"] #themeBtn { display: none; }
+  html[lang="en"] .mode-switch a { padding: 3px 8px; font-size: 13px; }
+  html[lang="en"] .topnav a { padding: 6px 5px; font-size: 14px; }
+  html[lang="en"] .lock-btn { padding: 4px 8px; }
+}
 .lock-btn { border: 1px solid var(--rule); background: var(--page); border-radius: 999px; padding: 4px 12px; font-size: 14px; cursor: pointer; color: var(--ink-2); white-space: nowrap; }
 .lock-btn.unlocked { border-color: var(--ok); color: var(--ok); }
 @media (max-width: 440px) {
