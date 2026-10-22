@@ -6,8 +6,8 @@
   "year": null,
   "venue": "",
   "link": "",
-  "pdf": "",
-  "pdfName": "",
+  "pdf": "papers/20261020-training-emo3.pdf",
+  "pdfName": "2508.10016v4.pdf",
   "tags": [],
   "project": "",
   "readDate": "2026-10-20",
@@ -176,5 +176,5 @@
   },
   "reviews": [],
   "createdAt": "2026-10-20T16:50:48.666Z",
-  "updatedAt": "2026-10-21T14:47:45.586Z"
+  "updatedAt": "2026-10-22T14:14:33.002Z"
 }
