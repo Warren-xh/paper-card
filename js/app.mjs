@@ -4,6 +4,7 @@ import { GitHubClient } from "./github.mjs";
 import { sealToken, openVault, passwordProblem, validToken } from "./vault.mjs";
 import * as L from "./lab.mjs";
 import { createLab } from "./lab-views.mjs";
+import { createMaps } from "./map-views.mjs";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -204,7 +205,8 @@ async function loadSite() {
 }
 
 function applySite() {
-  const name = document.body.dataset.mode === "lab" ? "实操记录" : state.site.title || "文献卡片";
+  const mode = document.body.dataset.mode;
+  const name = mode === "lab" ? "实操记录" : mode === "map" ? "思维导图" : state.site.title || "文献卡片";
   $("#brandName").textContent = name;
   document.title = name;
 }
@@ -213,7 +215,7 @@ function applySite() {
 function setMode(mode) {
   document.body.dataset.mode = mode;
   $$(".mode-switch a").forEach((a) => (a.dataset.mode === mode ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-  $("#brand").setAttribute("href", mode === "lab" ? "#/lab" : "#/");
+  $("#brand").setAttribute("href", mode === "lab" ? "#/lab" : mode === "map" ? "#/map" : "#/");
   store.set("pc-mode", mode);
   applySite();
 }
@@ -235,6 +237,7 @@ async function loadIndex() {
   store.set("pc-recent", fresh);
   updateBadge();
   await lab.loadLogs();
+  await maps.loadMaps();
 }
 
 async function getCard(id) {
@@ -376,6 +379,7 @@ async function ensureUnlocked() {
     toast("已解锁，可以编辑了。");
     state.cards.clear();
     lab.clearCache();
+    maps.clearCache();
     await loadIndex().catch(() => {});
   }
   return !!ok;
@@ -395,6 +399,20 @@ async function route() {
   currentHash = location.hash || "#/";
   editorDirty = false;
   window.onbeforeunload = null;
+  // #/map is the list of mind maps; #/map/<id> browses one, #/map/<id>/edit edits it.
+  document.body.classList.toggle("wide", name === "map" && !!arg);
+  if (name === "map") {
+    setMode("map");
+    $$(".topnav a").forEach((a) => a.removeAttribute("aria-current"));
+    try {
+      await (arg ? maps.view(decodeURIComponent(arg), arg2 === "edit" ? "edit" : "browse") : maps.list());
+    } catch (error) {
+      console.error(error);
+      main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/map">回到全部导图</a></p></div>`;
+    }
+    window.scrollTo(0, 0);
+    return;
+  }
   // #/lab, #/lab/new, #/lab/e/<id>, #/lab/edit/<id> are practice logs.
   const isLab = name === "lab";
   const view = isLab ? (arg === "e" ? "view" : arg === "edit" || arg === "new" ? "edit" : "home") : ROUTES[name] || "home";
@@ -424,6 +442,17 @@ const lab = createLab({
   plainEnter, wrapSelection, fileToBase64, shrinkImage: (file) => shrinkImage(file),
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
+  setLeave: (fn) => { leaveEditor = fn; },
+});
+
+const maps = createMaps({
+  state, $, $$, h, toast, dialog, confirmDialog, copyText, store,
+  readData: (path) => readData(path),
+  ensureUnlocked: () => ensureUnlocked(),
+  lock: (expired) => lock(expired),
+  route: () => route(),
+  plainEnter,
+  setDirty: (dirty) => { editorDirty = dirty; },
   setLeave: (fn) => { leaveEditor = fn; },
 });
 
@@ -1346,7 +1375,7 @@ async function settingsView() {
   const titles = () => new Map(state.index.cards.map((x) => [x.id, x.title]));
   $("#exportMd").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".md", (await loadAll()).map((c) => M.cardToMarkdown(c, titles())).join("\n---\n\n"));
   $("#exportLogs").onclick = async () => download("实操记录-全部-" + M.todayISO() + ".md", (await lab.loadAll()).map((l) => L.logToMarkdown(l, titles())).join("\n---\n\n"));
-  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll() }, null, 2), "application/json");
+  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll(), maps: await maps.loadAll() }, null, 2), "application/json");
 }
 
 async function changePassword() {
@@ -1504,6 +1533,7 @@ async function boot() {
   }
   addEventListener("hashchange", route);
   if (!location.hash && store.get("pc-mode") === "lab") history.replaceState(null, "", "#/lab");
+  if (!location.hash && store.get("pc-mode") === "map") history.replaceState(null, "", "#/map");
   route();
 }
 
