@@ -1,7 +1,29 @@
 {
  "version": 1,
- "updatedAt": "2026-10-22T14:14:33.002Z",
+ "updatedAt": "2026-10-22T14:27:15.891Z",
  "cards": [
+  {
+   "id": "20261022-survey-34fu",
+   "title": "Survey for LLM for Disaster Manage",
+   "authors": "",
+   "year": null,
+   "venue": "",
+   "tags": [],
+   "project": "",
+   "readDate": "2026-10-22",
+   "status": "reading",
+   "oneLine": "",
+   "questions": 1,
+   "pdf": false,
+   "marks": 7,
+   "filled": 0,
+   "links": [],
+   "due": "",
+   "level": 0,
+   "reviews": 0,
+   "text": "Survey for LLM for Disaster Manage 了解llm 在灾情方面的各种运用 根据灾害阶段 - 应用场景 - 具体任务 - 模型架构 来建立分类体系 当前研究多数集中在灾后响应，而我可以集中在数据和部署效率方面 LLM的潜力：分析海量实时灾情数据：社交媒体，新闻，卫星图像，辅助决策，受灾沟通 研究要说明空白，要看哪些做法有效，哪里缺少研究 自述贡献： 覆盖四个阶段的 LLM 应用总是，汇总公开数据集，提出挑战和未来方向 灾害管理四阶段：减灾mitigation，备灾 Preparedness，响应：response，恢复 recovery 编码器类型：BERT 擅长理解上下文，用于分类抽取， 解码器：gpt 系列 多模态：文字图像等",
+   "updatedAt": "2026-10-22T14:27:15.891Z"
+  },
   {
    "id": "20261021-omnisift-bph5",
    "title": "OmniSIFT 音视频压缩",
