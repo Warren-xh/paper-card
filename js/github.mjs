@@ -95,6 +95,24 @@ export class GitHubClient {
     return info;
   }
 
+  // When each save was made since `since` (newest first), for the activity calendar.
+  async commitDates(since, maxPages = 10) {
+    const dates = [];
+    for (let page = 1; page <= maxPages; page++) {
+      const list = await this.api(
+        this.repoPath("/commits?sha=" + encodeURIComponent(this.branch) + "&since=" + encodeURIComponent(since) + "&per_page=100&page=" + page),
+        { timeout: 15000 },
+      );
+      if (!Array.isArray(list)) break;
+      for (const c of list) {
+        const date = c?.commit?.author?.date || c?.commit?.committer?.date;
+        if (date) dates.push(date);
+      }
+      if (list.length < 100) break;
+    }
+    return dates;
+  }
+
   async headSha() {
     const ref = await this.api(
       this.repoPath("/git/ref/heads/" + encodeURIComponent(this.branch)),

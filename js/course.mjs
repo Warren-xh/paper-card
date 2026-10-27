@@ -65,6 +65,45 @@ export const materialName = (path) => path.split("/").pop();
 export const isImageFile = (path) => /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(path);
 export const isPdfFile = (path) => /\.pdf$/i.test(path);
 
+/* ---------- video: play inside the lesson page, jump to a mark's time ---------- */
+// YouTube and Bilibili links become a player; other links just open.
+export function videoInfo(link) {
+  let u;
+  try { u = new URL(String(link || "").trim()); } catch { return null; }
+  const host = u.hostname.replace(/^(www|m)\./, "");
+  let m;
+  if (host === "youtu.be" && (m = u.pathname.match(/^\/([\w-]{11})/))) return { site: "youtube", id: m[1] };
+  if (host === "youtube.com" || host === "youtube-nocookie.com") {
+    if (u.searchParams.get("v")?.match(/^[\w-]{11}$/)) return { site: "youtube", id: u.searchParams.get("v") };
+    if ((m = u.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/))) return { site: "youtube", id: m[1] };
+  }
+  if (host === "bilibili.com" || host === "b23.tv") {
+    const page = Math.max(1, parseInt(u.searchParams.get("p"), 10) || 1);
+    if ((m = u.pathname.match(/\/video\/(BV[0-9A-Za-z]{10})/))) return { site: "bilibili", id: m[1], page };
+    if ((m = u.pathname.match(/\/video\/av(\d+)/i))) return { site: "bilibili", id: "av" + m[1], page };
+  }
+  if (host === "player.bilibili.com") {
+    const page = Math.max(1, parseInt(u.searchParams.get("page") || u.searchParams.get("p"), 10) || 1);
+    const bvid = u.searchParams.get("bvid");
+    if (/^BV[0-9A-Za-z]{10}$/.test(bvid || "")) return { site: "bilibili", id: bvid, page };
+    if (/^\d+$/.test(u.searchParams.get("aid") || "")) return { site: "bilibili", id: "av" + u.searchParams.get("aid"), page };
+  }
+  return null;
+}
+
+export function videoEmbedUrl(v, seconds = 0, autoplay = false) {
+  const t = Math.max(0, Math.floor(seconds) || 0);
+  if (v.site === "youtube") return `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&start=${t}${autoplay ? "&autoplay=1" : ""}`;
+  const id = v.id.startsWith("av") ? "aid=" + v.id.slice(2) : "bvid=" + v.id;
+  return `https://player.bilibili.com/player.html?${id}&page=${v.page || 1}&t=${t}&autoplay=${autoplay ? 1 : 0}&high_quality=1&danmaku=0`;
+}
+
+export function videoWatchUrl(v, seconds = 0) {
+  const t = Math.max(0, Math.floor(seconds) || 0);
+  if (v.site === "youtube") return `https://www.youtube.com/watch?v=${v.id}${t ? "&t=" + t + "s" : ""}`;
+  return `https://www.bilibili.com/video/${v.id}${v.page > 1 ? "?p=" + v.page : ""}${t ? (v.page > 1 ? "&" : "?") + "t=" + t : ""}`;
+}
+
 // Every material file of a course (for deleting it).
 export const coursePaths = (course) => course.lessons.flatMap((l) => l.files.map((f) => f.path));
 
@@ -197,6 +236,7 @@ export function summarize(c) {
     done: p.done,
     open: c.lessons.reduce((t, l) => t + openMarks(l).length, 0),
     next: nextLesson(c)?.title || "",
+    nextId: nextLesson(c)?.id || "",
     text: plainText(c).slice(0, 4000),
     updatedAt: c.updatedAt,
   };

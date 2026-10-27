@@ -2,6 +2,7 @@
 // browse mode (drag to pan, zoom, fold, click to jump) and an edit mode.
 import * as MM from "./mindmap.mjs";
 import * as M from "./model.mjs";
+import { kindIcon } from "./palette.mjs";
 
 const PAD = 60;
 const ZOOM_MIN = 0.2;
@@ -93,9 +94,9 @@ export function createMaps(ctx) {
   async function list() {
     const maps = state.maps.maps;
     main.innerHTML = `
-      <div class="sheet">
-        <h1 class="site-title">思维导图</h1>
-        <p class="site-sub">把读过的论文、做过的实操串成一张图。</p>
+      <div class="sheet hero">
+        <div class="hero-head"><span class="hero-icon">${kindIcon("map")}</span><div><h1 class="site-title">思维导图</h1>
+        <p class="site-sub">把读过的论文、做过的实操、学过的课程串成一张图。</p></div></div>
         <div class="home-actions"><p class="due-none">${maps.length ? `共 ${maps.length} 张导图。` : "新建一张导图，从中心主题开始加分支；分支可以是文字，也可以是论文卡片或实操记录。"}</p>
           <button class="btn primary" id="newMap">新建导图</button></div>
       </div>

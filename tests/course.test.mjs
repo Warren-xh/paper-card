@@ -138,4 +138,28 @@ test("lesson materials are kept only at their own place", () => {
   // File names are searchable and listed in the Markdown export.
   assert.match(C.summarize(c).text, /课件 L01\.pdf/);
   assert.match(C.courseToMarkdown(c), /课件与资料：\n- \[课件 L01\.pdf\]\(materials\//);
+  assert.equal(C.summarize(c).nextId, "abc123");
+});
+
+test("video links become players and time links", () => {
+  const yt = C.videoInfo("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s");
+  assert.deepEqual(yt, { site: "youtube", id: "dQw4w9WgXcQ" });
+  assert.deepEqual(C.videoInfo("https://youtu.be/dQw4w9WgXcQ?si=x"), yt);
+  assert.deepEqual(C.videoInfo("https://m.youtube.com/shorts/dQw4w9WgXcQ"), yt);
+  assert.equal(C.videoEmbedUrl(yt, 125.7, true), "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&start=125&autoplay=1");
+  assert.equal(C.videoWatchUrl(yt, 65), "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=65s");
+
+  const bv = C.videoInfo("https://www.bilibili.com/video/BV1GJ411x7h7/?p=3&spm_id_from=x");
+  assert.deepEqual(bv, { site: "bilibili", id: "BV1GJ411x7h7", page: 3 });
+  assert.equal(C.videoEmbedUrl(bv, 90), "https://player.bilibili.com/player.html?bvid=BV1GJ411x7h7&page=3&t=90&autoplay=0&high_quality=1&danmaku=0");
+  assert.equal(C.videoWatchUrl(bv, 90), "https://www.bilibili.com/video/BV1GJ411x7h7?p=3&t=90");
+  assert.equal(C.videoWatchUrl({ ...bv, page: 1 }, 0), "https://www.bilibili.com/video/BV1GJ411x7h7");
+  const av = C.videoInfo("https://m.bilibili.com/video/av170001");
+  assert.deepEqual(av, { site: "bilibili", id: "av170001", page: 1 });
+  assert.match(C.videoEmbedUrl(av, 0), /player\.html\?aid=170001&page=1&t=0/);
+  assert.deepEqual(C.videoInfo("https://player.bilibili.com/player.html?bvid=BV1GJ411x7h7&page=2"), { site: "bilibili", id: "BV1GJ411x7h7", page: 2 });
+
+  for (const bad of ["", "not a url", "https://example.com/watch?v=dQw4w9WgXcQ", "https://www.youtube.com/watch?v=short", "https://www.bilibili.com/read/cv1"])
+    assert.equal(C.videoInfo(bad), null, bad);
+  assert.equal(C.timeSeconds("1:02:03"), 3723);
 });

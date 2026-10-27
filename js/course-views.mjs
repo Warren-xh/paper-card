@@ -3,6 +3,7 @@
 import * as C from "./course.mjs";
 import * as M from "./model.mjs";
 import * as L from "./lab.mjs";
+import { kindIcon } from "./palette.mjs";
 
 export function createCourses(ctx) {
   const { state, $, $$, h, renderMarkdown, renderInline, toast, confirmDialog, copyText, typesetMath, store } = ctx;
@@ -87,8 +88,8 @@ export function createCourses(ctx) {
     const total = l.files.reduce((t, f) => t + (f.size || 0), 0);
     return `<section class="section files-section"><div class="sec-head"><h2>课件与资料</h2><span class="muted small">${l.files.length} 个 · ${L.formatSize(total)}</span></div>
       ${others.length ? `<ul class="file-view">${others.map((f) => `<li><div class="file-row"><span class="fname" title="${h(C.materialName(f.path))}">${h(C.materialName(f.path))}</span><span class="muted small">${L.formatSize(f.size)}</span>
-        ${C.isPdfFile(f.path) ? `<a class="btn quiet small" href="${h(fileUrl(f.path))}" target="_blank" rel="noopener">打开</a>` : ""}
-        <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(C.materialName(f.path))}">下载</a></div></li>`).join("")}</ul>` : ""}
+        ${C.isPdfFile(f.path) ? `<button type="button" class="btn quiet small" data-preview="${h(fileUrl(f.path))}" aria-expanded="false">预览</button><a class="btn quiet small" href="${h(fileUrl(f.path))}" target="_blank" rel="noopener">打开</a>` : ""}
+        <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(C.materialName(f.path))}">下载</a></div><div class="pdf-preview" hidden></div></li>`).join("")}</ul>` : ""}
       ${images.length ? `<div class="material-images">${images.map((f) => `<a href="${h(fileUrl(f.path))}" target="_blank" rel="noopener" title="${h(C.materialName(f.path))}"><img src="${h(fileUrl(f.path))}" alt="${h(C.materialName(f.path))}" loading="lazy"><span>${h(C.materialName(f.path))}</span></a>`).join("")}</div>` : ""}
     </section>`;
   }
@@ -98,9 +99,9 @@ export function createCourses(ctx) {
     const all = state.courses.courses;
     const s = C.stats(all);
     main.innerHTML = `
-      <div class="sheet">
-        <h1 class="site-title">课程笔记</h1>
-        <p class="site-sub">看课时随手记，看完一课写一句话。</p>
+      <div class="sheet hero">
+        <div class="hero-head"><span class="hero-icon">${kindIcon("course")}</span><div><h1 class="site-title">课程笔记</h1>
+        <p class="site-sub">看课时随手记，看完一课写一句话。</p></div></div>
         <div class="home-actions">
           <p class="due-none">${s.open ? `还有 ${s.open} 个待解决的问题。` : all.length ? "边看边记时间点，回看时一眼找到。" : "添加一门课程，列出课时，看每一课时边看边记。"}</p>
           <a class="btn primary" href="#/course/new">添加课程</a></div>
@@ -223,6 +224,8 @@ export function createCourses(ctx) {
     const prev = c.lessons[i - 1];
     const next = c.lessons[i + 1];
     const flagged = l.marks.filter((m) => m.solve);
+    const video = C.videoInfo(l.link);
+    const at = (m) => (video && m.time ? `<button type="button" class="time seek" data-seek="${C.timeSeconds(m.time)}" title="从 ${h(m.time)} 开始播放">${h(m.time)}</button>` : `<span class="time">${h(m.time)}</span>`);
     main.innerHTML = `
       <div class="toolbar">
         <a class="btn quiet" href="#/course/${h(id)}">← ${h(c.title || "课程")}</a>
@@ -232,18 +235,30 @@ export function createCourses(ctx) {
         <div class="meta-line"><span class="status s-${l.done ? "done" : "reading"}">${l.done ? "看完了" : "没看完"}</span><span>第 ${i + 1} 课</span>${l.date ? `<span>${l.date}</span>` : ""}${l.link ? `<a href="${h(M.paperHref(l.link))}" target="_blank" rel="noopener">视频链接</a>` : ""}</div>
         <h1 class="card-title">${h(lessonName(l, i))}</h1>
         ${l.oneLine ? `<section class="one-line"><h2 class="sec-label">这一课讲了什么</h2><div class="sec-body"><p>${h(l.oneLine)}</p></div></section>` : ""}
+        ${video ? `<section class="section video-sec"><div class="sec-head"><h2>视频</h2><a class="small" href="${h(C.videoWatchUrl(video))}" target="_blank" rel="noopener">在${video.site === "youtube" ? " YouTube " : " B 站"}打开</a></div>
+          <div class="video-box" id="videoBox"><button type="button" class="video-start" data-seek="0"><span>▶</span>在页面里播放</button></div>
+          ${l.marks.some((m) => m.time) ? `<p class="hint small">点「边看边记」里的时间，视频会跳到那一刻。</p>` : ""}</section>` : ""}
         ${l.notes.trim() ? `<section class="section"><h2>笔记</h2><div class="md">${md()(l.notes)}</div></section>` : ""}
         ${materialsHtml(l)}
-        ${l.marks.length ? `<section class="section"><h2>边看边记</h2><ol class="step-view">${C.marksByTime(l.marks).map((m) => `<li><span class="time">${h(m.time)}</span>${sym(m.type)}<span>${renderInline(m.text)}${m.solve ? (m.answer ? ` <span class="solved-tick" title="已解决">✓</span>` : ` <span class="todo-tag">待解决</span>`) : ""}</span></li>`).join("")}</ol></section>` : ""}
-        ${flagged.length ? `<section class="section"><h2>问题与解答</h2><ul class="solve-view">${flagged.map((m) => `<li><div class="q">${sym(m.type)}${m.time ? `<span class="page">${h(m.time)}</span>` : ""}<span>${renderInline(m.text)}</span></div><div class="a">${m.answer ? renderInline(m.answer) : '<span class="muted">还没解决</span>'}</div></li>`).join("")}</ul></section>` : ""}
+        ${l.marks.length ? `<section class="section"><h2>边看边记</h2><ol class="step-view">${C.marksByTime(l.marks).map((m) => `<li>${at(m)}${sym(m.type)}<span>${renderInline(m.text)}${m.solve ? (m.answer ? ` <span class="solved-tick" title="已解决">✓</span>` : ` <span class="todo-tag">待解决</span>`) : ""}</span></li>`).join("")}</ol></section>` : ""}
+        ${flagged.length ? `<section class="section"><h2>问题与解答</h2><ul class="solve-view">${flagged.map((m) => `<li><div class="q">${sym(m.type)}${m.time ? at(m).replace('class="time', 'class="page') : ""}<span>${renderInline(m.text)}</span></div><div class="a">${m.answer ? renderInline(m.answer) : '<span class="muted">还没解决</span>'}</div></li>`).join("")}</ul></section>` : ""}
         ${!l.oneLine && !l.marks.length && !l.notes.trim() && !l.files.length ? `<div class="empty-lesson"><p class="muted">这一课还没有笔记和资料。</p><a class="btn primary" href="#/course/${h(id)}/l/${h(lid)}/edit">开始记笔记</a></div>` : ""}
         <nav class="entry-nav" aria-label="翻页">
           ${prev ? `<a href="#/course/${h(id)}/l/${h(prev.id)}">← ${h(lessonName(prev, i - 1))}</a>` : "<span></span>"}
           ${next ? `<a href="#/course/${h(id)}/l/${h(next.id)}">${h(lessonName(next, i + 1))} →</a>` : "<span></span>"}
         </nav>
       </article>`;
+    // The player loads only when asked; a time jumps the video there.
+    if (video) $("article", main).addEventListener("click", (e) => {
+      const b = e.target.closest("[data-seek]");
+      if (!b) return;
+      const box = $("#videoBox");
+      box.innerHTML = `<iframe src="${h(C.videoEmbedUrl(video, +b.dataset.seek, true))}" title="视频" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+      if (!b.classList.contains("video-start")) box.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
     typesetMath(main);
   }
+
 
   /* ---------- course editor ---------- */
   async function edit(id) {
@@ -754,5 +769,5 @@ export function createCourses(ctx) {
     return (await Promise.all(state.courses.courses.map((x) => getCourse(x.id).catch(() => null)))).filter(Boolean);
   }
 
-  return { loadCourses, list, view, edit, lessonView, lessonEdit, loadAll, clearCache: () => state.courseCache.clear() };
+  return { loadCourses, list, view, edit, lessonView, lessonEdit, loadAll, clearCache: () => state.courseCache.clear(), setStatus: (s) => { filter.status = s; } };
 }

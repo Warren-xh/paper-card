@@ -1,5 +1,6 @@
 // Pages for practice logs (实操记录). Shared helpers come from app.mjs through `ctx`.
 import * as L from "./lab.mjs";
+import { kindIcon } from "./palette.mjs";
 import * as M from "./model.mjs";
 
 export function createLab(ctx) {
@@ -84,9 +85,9 @@ export function createLab(ctx) {
     const s = L.stats(logs);
     const f = state.labFilter;
     main.innerHTML = `
-      <div class="sheet">
-        <h1 class="site-title">实操记录</h1>
-        <p class="site-sub">动手做过的记下来，踩过的坑下次不再踩。</p>
+      <div class="sheet hero">
+        <div class="hero-head"><span class="hero-icon">${kindIcon("log")}</span><div><h1 class="site-title">实操记录</h1>
+        <p class="site-sub">动手做过的记下来，踩过的坑下次不再踩。</p></div></div>
         <div class="home-actions">
           <p class="due-none">${s.open ? `还有 ${s.open} 条待解决的问题。` : logs.length ? "写代码、跑实验、做练习时，开一条记录随手记。" : "第一次用：点「新建一条记录」，开始时写目标，过程中随手记，做完写结论。"}</p>
           <a class="btn primary" href="#/lab/new">新建一条记录</a></div>
@@ -223,7 +224,10 @@ export function createLab(ctx) {
         let text = await fileText(f.path);
         if (/\.ipynb$/i.test(f.path)) { try { text = L.notebookText(text); } catch {} }
         code.textContent = text.length > 300000 ? text.slice(0, 300000) + "\n\n…（文件太长，只显示前 300 KB，完整内容请下载）" : text;
+        const ext = (f.path.match(/\.(\w+)$/) || [])[1];
+        if (ext) code.className = "lang-" + (ext === "ipynb" ? "python" : ext.toLowerCase());
         pre.dataset.loaded = "1";
+        typesetMath(pre);
       } catch (error) {
         code.textContent = error.message;
       }

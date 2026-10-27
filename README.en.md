@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.1** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.2** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -28,7 +28,15 @@ Current version: **v4.1** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE).
 
 ## What it does
 
-The **Papers | Lab | Courses | Maps** switch in the top bar moves between four modes. Every list can be **searched** and **sorted** (your sort choice is remembered).
+The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between the overview and four modes, each with its own colour. Every list can be **searched** and **sorted** (your sort choice is remembered).
+
+**Today — overview** (🏠, or the site name at the top left)
+
+- What is waiting today: cards to review, the lesson to continue, practice in progress and open questions in every module.
+- A **study calendar**: how many times you saved on the site each day over the last six months, like GitHub's contribution graph, with your current streak.
+- Quick starts and recent changes.
+
+**Search everything**: press **Ctrl+K** (⌘K on a Mac) or the magnifier in the top bar to search papers, logs, courses, **every lesson's notes** and mind maps from one box; arrow keys to pick, Enter to open. With nothing typed it shows quick actions and recent changes.
 
 **Papers — paper cards**
 
@@ -62,9 +70,13 @@ The **Papers | Lab | Courses | Maps** switch in the top bar moves between four m
 - **Browse mode**: drag to move, zoom, fold branches, click a paper, practice or course branch to open it; **Find in map** highlights matching branches and Enter jumps between them.
 - **Edit mode**: add branches, pick colours, write notes, drag a branch onto another to move it; undo and keyboard shortcuts.
 
-**Images**: every notes box in every module has an **Insert image** button; you can also **paste a screenshot with Ctrl+V** or drag an image in, including into one-line marks and log entries. Images are compressed in the browser and uploaded when you save.
+**Course videos**: when a lesson's video link is on **Bilibili or YouTube**, the lesson page plays it in place; click a time under “Notes while watching” and the video jumps there.
 
-**Also**: one-line boxes such as reading marks and log entries grow with their text, so long entries stay fully visible; drafts are saved on your device; every save is a Git commit, so mistakes can be undone from the history; export everything as Markdown or JSON; light and dark themes; works on phones.
+**PDF preview**: paper PDFs and PDF course materials can be previewed right on the page.
+
+**Images**: click any image to view it large, with ← → to move between them. Every notes box in every module has an **Insert image** button; you can also **paste a screenshot with Ctrl+V** or drag an image in, including into one-line marks and log entries. Images are compressed in the browser and uploaded when you save.
+
+**Also**: press **Ctrl+S** to save while editing; code blocks are coloured; long pages get a back-to-top button; one-line boxes such as reading marks and log entries grow with their text, so long entries stay fully visible; drafts are saved on your device; every save is a Git commit, so mistakes can be undone from the history; export everything as Markdown or JSON; light and dark themes; works on phones.
 
 ---
 
@@ -152,7 +164,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.1"
+git commit -m "Paper Cards v4.2"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -260,6 +272,9 @@ Main files:
 | `js/lab.mjs`, `js/lab-views.mjs` | Practice logs |
 | `js/course.mjs`, `js/course-views.mjs` | Course notes |
 | `js/mindmap.mjs`, `js/map-views.mjs` | Mind-map data, automatic layout and pages |
+| `js/overview.mjs`, `js/overview-views.mjs` | The Today overview and study calendar |
+| `js/search.mjs`, `js/palette.mjs` | Search everything (Ctrl+K) |
+| `js/enhance.mjs` | Image viewer, code colours, Ctrl+S, back to top, PDF preview |
 | `js/i18n.mjs` | Interface language (Chinese / English) |
 | `js/github.mjs` | One commit per save through the Git Data API, retried on conflicts |
 | `js/vault.mjs` | Token encryption |

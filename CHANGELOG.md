@@ -3,6 +3,19 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.2 — 2026-10-28
+
+- 新的「今天」总览页（顶栏 🏠，也是网站名的链接）：今天该回顾的卡片、继续上哪一课、进行中的实操、各模块待解决的问题；近半年的**学习日历**（按每天在网站上保存的次数）和连续学习天数；快速开始和最近更新。
+  New **Today** overview (🏠 in the top bar, also the site name): cards to review, the lesson to continue, practice in progress and open questions everywhere; a six-month **study calendar** of daily saves with your streak; quick starts and recent changes.
+- **全站搜索**：Ctrl+K / ⌘K 或顶栏放大镜，一个框搜论文、实操、课程、每一课的笔记和导图，键盘就能选、能打开；也能直接跳到常用操作。
+  **Search everything** with Ctrl+K / ⌘K or the magnifier: papers, logs, courses, every lesson's notes and mind maps in one box, fully keyboard-driven, plus quick actions.
+- 课时的视频链接是 B 站或 YouTube 时，课时页可以**在页面里播放**，点标记的时间就**跳到那一刻**。
+  Lessons with a Bilibili or YouTube link **play in the page**; clicking a mark's time **jumps the video there**.
+- 论文 PDF 和课程资料 PDF 可以**在页面里预览**；点任何图片**放大查看**，← → 切换。
+  **Preview PDFs** (papers and course materials) in the page; click any image to **view it large**, ← → to move between images.
+- 界面重新设计：每个模块有自己的颜色和图标，首页改成带图标的标题和数字卡片，卡片、按钮、列表更柔和，页面切换有过渡；代码块自动上色；编辑时 Ctrl+S 保存；长页面有「回到顶部」。
+  Redesigned look: each module has its own colour and icon, module homes get an icon header and number tiles, softer cards, buttons and lists, gentle page transitions; coloured code blocks; Ctrl+S saves while editing; a back-to-top button on long pages.
+
 ## v4.1 — 2026-10-27
 
 - 课程里每一课都能上传**课件与资料**（PDF、PPT、讲义、图片等，也可以直接拖进来），存在仓库的 `materials/` 文件夹；课时页上可以打开、下载，图片显示成缩略图。删除课时或课程时一起删除。

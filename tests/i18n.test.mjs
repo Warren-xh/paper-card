@@ -50,3 +50,20 @@ test("course materials and image paste have English", () => {
   assert.equal(tr("已插入 3 张图片，保存时一起上传。"), "Inserted 3 images; they are uploaded when you save.");
   for (const s of ["课件与资料", "上传文件", "开始记笔记", "可以直接 Ctrl+V 粘贴截图", "插入图片（也可以直接 Ctrl+V 粘贴截图）"]) assert.ok(tr(s), "missing English for " + s);
 });
+
+test("overview, search and video have English", async () => {
+  const { KIND_LABELS } = await import("../js/search.mjs");
+  for (const l of Object.values(KIND_LABELS)) assert.ok(tr(l), "missing English for " + l);
+  assert.equal(tr("晚上好，Warren"), "Good evening, Warren");
+  assert.equal(tr("10 月 27 日 星期二"), "Tuesday, Oct 27");
+  assert.equal(tr("10 月 27 日：2 次保存"), "Oct 27: 2 saves");
+  assert.equal(tr("3 月 1 日：没有记录"), "Mar 1: nothing");
+  assert.equal(tr("2 张卡片该回顾"), "2 cards to review");
+  assert.equal(tr("下一次：10 月 30 日（2 张）"), "Next: Oct 30 (2)");
+  assert.equal(tr("CS329 · 已看 1 / 4 课"), "CS329 · watched 1 / 4");
+  assert.equal(tr("45 分钟前"), "45 min ago");
+  assert.equal(tr("4 天前"), "4 days ago");
+  assert.equal(tr("没有找到「agent」。换个关键词试试。"), "Nothing found for “agent”. Try another word.");
+  assert.equal(tr("从 3:20 开始播放"), "Play from 3:20");
+  assert.equal(tr("1 个待解决的问题"), "1 open question");
+});

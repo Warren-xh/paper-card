@@ -34,7 +34,7 @@ async function seed() {
   await walk(root);
   const tree = putTree(files);
   head = sha("commit-root");
-  objects.set(head, { type: "commit", tree, parents: [], message: "seed" });
+  objects.set(head, { type: "commit", tree, parents: [], message: "seed", date: new Date().toISOString() });
 }
 
 const body = (req) => new Promise((resolve) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => resolve(d ? JSON.parse(d) : {})); });
@@ -57,6 +57,14 @@ async function mockApi(req, res, path) {
     head = b.sha;
     console.log("  mock commit:", commit.message);
     return json(res, 200, { object: { sha: head } });
+  }
+  // Commit history (newest first), as the activity calendar asks for it.
+  if (rest.startsWith("/commits") && method === "GET") {
+    const all = [];
+    for (let id = head; id; id = objects.get(id).parents[0])
+      all.push({ sha: id, commit: { message: objects.get(id).message, author: { date: objects.get(id).date } } });
+    const page = Math.max(1, Number(new URL("http://x" + rest).searchParams.get("page")) || 1);
+    return json(res, 200, all.slice((page - 1) * 100, page * 100));
   }
   if (rest.startsWith("/git/commits/") && method === "GET") {
     const c = objects.get(rest.slice(13));
@@ -82,7 +90,7 @@ async function mockApi(req, res, path) {
   if (rest === "/git/commits" && method === "POST") {
     const b = await body(req);
     const id = sha("commit" + b.tree + b.parents.join() + Date.now() + Math.random());
-    objects.set(id, { type: "commit", tree: b.tree, parents: b.parents, message: b.message });
+    objects.set(id, { type: "commit", tree: b.tree, parents: b.parents, message: b.message, date: new Date().toISOString() });
     return json(res, 201, { sha: id });
   }
   if (rest.startsWith("/contents/") && method === "GET") {

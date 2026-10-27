@@ -8,8 +8,11 @@ import { createMaps } from "./map-views.mjs";
 import { createCourses } from "./course-views.mjs";
 import * as CO from "./course.mjs";
 import { startTranslation, getLang, setLang, LANGS } from "./i18n.mjs";
+import { createOverview } from "./overview-views.mjs";
+import { createPalette, kindIcon } from "./palette.mjs";
+import { startEnhancements, highlightCode } from "./enhance.mjs";
 
-export const VERSION = "4.1";
+export const VERSION = "4.2";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -261,6 +264,7 @@ function loadKatex() {
   return katexLoading;
 }
 async function typesetMath(root) {
+  highlightCode(root);
   const nodes = $$(".math", root);
   if (!nodes.length) return;
   try {
@@ -324,7 +328,7 @@ function applySite() {
 function setMode(mode) {
   document.body.dataset.mode = mode;
   $$(".mode-switch a").forEach((a) => (a.dataset.mode === mode ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-  $("#brand").setAttribute("href", { lab: "#/lab", course: "#/course", map: "#/map" }[mode] || "#/");
+  $("#brand").setAttribute("href", "#/today");
   store.set("pc-mode", mode);
   applySite();
 }
@@ -511,8 +515,22 @@ async function route() {
   currentHash = location.hash || "#/";
   editorDirty = false;
   window.onbeforeunload = null;
-  // #/map is the list of mind maps; #/map/<id> browses one, #/map/<id>/edit edits it.
+  // #/map/<id> pages use the full width; everything else does not.
   document.body.classList.toggle("wide", name === "map" && !!arg);
+  // #/today is the overview of everything.
+  if (name === "today") {
+    setMode("today");
+    $$(".topnav a").forEach((a) => a.removeAttribute("aria-current"));
+    try {
+      await overview.view();
+    } catch (error) {
+      console.error(error);
+      main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/">回到首页</a></p></div>`;
+    }
+    window.scrollTo(0, 0);
+    return;
+  }
+  // #/map is the list of mind maps; #/map/<id> browses one, #/map/<id>/edit edits it.
   if (name === "map") {
     setMode("map");
     $$(".topnav a").forEach((a) => a.removeAttribute("aria-current"));
@@ -587,6 +605,32 @@ const courses = createCourses({
   setLeave: (fn) => { leaveEditor = fn; },
 });
 
+const overview = createOverview({
+  state, $, h, store, session,
+  loadCourseFiles: () => courses.loadAll(),
+  openSearch: () => palette.open(),
+  setFilter: (href, status) => {
+    if (href === "#/") state.filter.status = status;
+    else if (href === "#/lab") state.labFilter.status = status;
+    else if (href === "#/course") courses.setStatus(status);
+  },
+});
+
+const palette = createPalette({
+  state,
+  loadCourseFiles: () => courses.loadAll(),
+  actions: () => [
+    { label: "今天", hint: "总览", href: "#/today", keys: "today home jintian" },
+    { label: "写一张新卡片", hint: "文献", href: "#/new", keys: "new card paper" },
+    { label: "新建一条实操记录", hint: "实操", href: "#/lab/new", keys: "new lab log" },
+    { label: "添加课程", hint: "课程", href: "#/course/new", keys: "new course" },
+    { label: "思维导图", hint: "导图", href: "#/map", keys: "map" },
+    ...(M.dueCards(state.index.cards).length ? [{ label: "开始回顾", hint: M.dueCards(state.index.cards).length + " 张", href: "#/review", keys: "review" }] : []),
+    { label: "设置", href: "#/settings", keys: "settings" },
+    { label: "切换明暗主题", run: () => $("#themeBtn").click(), keys: "theme dark light" },
+  ],
+});
+
 const maps = createMaps({
   state, $, $$, h, toast, dialog, confirmDialog, copyText, store,
   readData: (path) => readData(path),
@@ -629,9 +673,9 @@ async function home() {
     : "";
 
   main.innerHTML = `
-    <div class="sheet">
-      <h1 class="site-title">${h(site.title)}</h1>
-      <p class="site-sub">${h(site.subtitle)}</p>
+    <div class="sheet hero">
+      <div class="hero-head"><span class="hero-icon">${kindIcon("card")}</span><div><h1 class="site-title">${h(site.title)}</h1>
+      <p class="site-sub">${h(site.subtitle)}</p></div></div>
       <div class="home-actions">${due}<a class="btn primary" href="#/new">写一张新卡片</a></div>
       ${statsHtml}
     </div>
@@ -790,7 +834,7 @@ function headHtml(c) {
   return `<div class="meta-line">${meta.join("")}</div>
     <h1 class="card-title">${c.title ? h(c.title) : '<span class="untitled">未写标题</span>'}</h1>
     ${cite || c.link ? `<p class="cite">${h(cite)}${c.link ? `${cite ? " · " : ""}<a href="${h(M.paperHref(c.link))}" target="_blank" rel="noopener">${h(linkLabel(c.link))}</a>` : ""}</p>` : ""}
-    ${c.pdf ? `<p class="pdf-line"><a class="btn small" href="${h(c.pdf)}" download="${h(pdfName(c))}">下载论文 PDF</a><a class="small" href="${h(c.pdf)}" target="_blank" rel="noopener">在新标签页打开</a></p>` : ""}
+    ${c.pdf ? `<div class="pdf-block"><p class="pdf-line"><button type="button" class="btn small" data-preview="${h(c.pdf)}" aria-expanded="false">预览</button><a class="btn small" href="${h(c.pdf)}" download="${h(pdfName(c))}">下载论文 PDF</a><a class="small" href="${h(c.pdf)}" target="_blank" rel="noopener">在新标签页打开</a></p><div class="pdf-preview" hidden></div></div>` : ""}
     ${c.why ? `<p class="why"><b>为什么读：</b>${h(c.why)}</p>` : ""}`;
 }
 
@@ -1646,6 +1690,8 @@ async function boot() {
       if (await confirmDialog("锁定编辑？", "锁定后需要重新输入密码才能编辑。", "锁定")) { lock(); toast("已锁定。"); route(); }
     } else if (await ensureUnlocked()) route();
   };
+  $("#searchBtn").onclick = () => palette.open();
+  startEnhancements();
   ["pointerdown", "keydown"].forEach((t) => addEventListener(t, () => (state.lastActive = Date.now()), { passive: true }));
   setInterval(() => {
     const remembered = (store.get("pc-token") || {}).until > Date.now();
@@ -1671,6 +1717,7 @@ async function boot() {
   if (!location.hash && store.get("pc-mode") === "lab") history.replaceState(null, "", "#/lab");
   if (!location.hash && store.get("pc-mode") === "map") history.replaceState(null, "", "#/map");
   if (!location.hash && store.get("pc-mode") === "course") history.replaceState(null, "", "#/course");
+  if (!location.hash && (store.get("pc-mode") === "today" || !store.get("pc-mode"))) history.replaceState(null, "", "#/today");
   route();
 }
 
