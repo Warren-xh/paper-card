@@ -1,0 +1,37 @@
+{
+ "version": 1,
+ "id": "20261027-cs329-lzad",
+ "title": "斯坦福cs329 why ai agent",
+ "teacher": "",
+ "link": "",
+ "tags": [],
+ "project": "",
+ "status": "learning",
+ "startDate": "2026-10-27",
+ "goal": "了解这门课是干嘛的",
+ "summary": "",
+ "lessons": [
+  {
+   "id": "j2p44a73",
+   "title": "需要用 ai 进行学习，虽然 ai 明显导致学生都掌握率变低",
+   "link": "",
+   "date": "",
+   "done": false,
+   "oneLine": "",
+   "marks": [],
+   "notes": ""
+  },
+  {
+   "id": "l4197zbc",
+   "title": "Agent = planning + Memory -> LLM core -> Tools -> Agent actions",
+   "link": "",
+   "date": "",
+   "done": false,
+   "oneLine": "",
+   "marks": [],
+   "notes": ""
+  }
+ ],
+ "createdAt": "2026-10-27T17:59:36.874Z",
+ "updatedAt": "2026-10-27T17:59:36.874Z"
+}
