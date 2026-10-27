@@ -2,9 +2,9 @@
 
 [中文](README.md) | **English**
 
-A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
+A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v3.1** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.0** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -28,7 +28,7 @@ Current version: **v3.1** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE).
 
 ## What it does
 
-The **Papers | Lab | Maps** switch in the top bar moves between three modes.
+The **Papers | Lab | Courses | Maps** switch in the top bar moves between four modes. Every list can be **searched** and **sorted** (your sort choice is remembered).
 
 **Papers — paper cards**
 
@@ -47,13 +47,19 @@ The **Papers | Lab | Maps** switch in the top bar moves between three modes.
 - Upload code files or a whole folder, then view and download them on the page; `.env` files, keys, `node_modules` and similar are skipped automatically.
 - Link logs to paper cards; the card page shows its related practice logs.
 
+**Courses — course notes**
+
+- A course holds its lessons: teacher / platform, link and why you're taking it. Add all lessons at once (one per line) and reorder them any time.
+- Each lesson has its own notes: marks with the **video time** while you watch (`?` unclear, `!` key point, `★` useful, `✎` note); tick **Open** on anything unclear and answer it afterwards; plus a one-line summary and free notes (images and formulas welcome).
+- The course page shows a progress bar and the lesson list — click a circle to mark a lesson watched; **Continue** jumps to the next unwatched lesson. Write your takeaways when you finish.
+
 **Maps — mind maps**
 
-- Branches can be text, a paper card or a practice log; each kind looks different so they're easy to tell apart.
-- **Browse mode**: drag to move, zoom, fold branches, click a paper or practice branch to open it.
+- Branches can be text, a paper card, a practice log or a course; each kind looks different so they're easy to tell apart.
+- **Browse mode**: drag to move, zoom, fold branches, click a paper, practice or course branch to open it; **Find in map** highlights matching branches and Enter jumps between them.
 - **Edit mode**: add branches, pick colours, write notes, drag a branch onto another to move it; undo and keyboard shortcuts.
 
-**Also**: drafts are saved on your device; every save is a Git commit, so mistakes can be undone from the history; export everything as Markdown or JSON; light and dark themes; works on phones.
+**Also**: one-line boxes such as reading marks and log entries grow with their text, so long entries stay fully visible; drafts are saved on your device; every save is a Git commit, so mistakes can be undone from the history; export everything as Markdown or JSON; light and dark themes; works on phones.
 
 ---
 
@@ -141,7 +147,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v3.1"
+git commit -m "Paper Cards v4.0"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -206,6 +212,7 @@ Every save is a Git commit, so GitHub keeps the full history. You can also downl
 | `data/cards/<id>.json` | One card per paper |
 | `data/index.json` | Card summaries for the home page, search and review |
 | `data/logs/<id>.json`, `data/logs-index.json` | Practice logs and their summaries |
+| `data/courses/<id>.json`, `data/courses-index.json` | Courses (with all lesson notes) and their summaries |
 | `data/maps/<id>.json`, `data/maps-index.json` | Mind maps and their summaries |
 | `data/site.json` | Site title, repository name and other settings |
 | `data/vault.json` | The encrypted access token (created by the first-time setup) |
@@ -245,6 +252,7 @@ Main files:
 | `js/app.mjs` | Routing, paper-card pages, settings, first-time setup |
 | `js/model.mjs` | Card data, review intervals, search, export |
 | `js/lab.mjs`, `js/lab-views.mjs` | Practice logs |
+| `js/course.mjs`, `js/course-views.mjs` | Course notes |
 | `js/mindmap.mjs`, `js/map-views.mjs` | Mind-map data, automatic layout and pages |
 | `js/i18n.mjs` | Interface language (Chinese / English) |
 | `js/github.mjs` | One commit per save through the Git Data API, retried on conflicts |

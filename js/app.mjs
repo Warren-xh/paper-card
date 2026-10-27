@@ -5,9 +5,11 @@ import { sealToken, openVault, passwordProblem, validToken } from "./vault.mjs";
 import * as L from "./lab.mjs";
 import { createLab } from "./lab-views.mjs";
 import { createMaps } from "./map-views.mjs";
+import { createCourses } from "./course-views.mjs";
+import * as CO from "./course.mjs";
 import { startTranslation, getLang, setLang, LANGS } from "./i18n.mjs";
 
-export const VERSION = "3.1";
+export const VERSION = "4.0";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -81,6 +83,36 @@ function wrapSelection(el, mark) {
   el.focus();
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
+// One-line text boxes (marks, steps, answers) that wrap and grow instead of hiding
+// long text. Enter never adds a line break: it keeps meaning "add this entry".
+function growBox(el) {
+  if (!el.isConnected || !el.offsetWidth) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + 2 + "px";
+}
+const growWatch = new ResizeObserver((entries) => {
+  for (const { target } of entries) {
+    // Only react to width changes (or becoming visible); our own height change is ignored.
+    if (+target.dataset.growWidth !== target.offsetWidth) { target.dataset.growWidth = target.offsetWidth; growBox(target); }
+  }
+});
+new MutationObserver((records) => {
+  for (const r of records) for (const n of r.addedNodes) {
+    if (n.nodeType !== 1) continue;
+    // Size new boxes right away (layout is ready here); the observer handles later width changes.
+    for (const t of n.matches("textarea.grow") ? [n] : n.querySelectorAll("textarea.grow")) { growBox(t); growWatch.observe(t); }
+  }
+}).observe(document.body, { childList: true, subtree: true });
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (!t.matches?.("textarea.grow")) return;
+  if (/\n/.test(t.value)) t.value = t.value.replace(/\s*\n+\s*/g, " ");
+  growBox(t);
+}, true);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.matches?.("textarea.grow") && !e.isComposing && e.keyCode !== 229) e.preventDefault();
+}, true);
+
 // Fields whose text is rendered as Markdown, so bold/italic show up.
 const FORMATTABLE = "#markText, [data-k=text], [data-solve], textarea:not([name=oneLine]):not(.short)";
 
@@ -212,7 +244,7 @@ async function loadSite() {
 
 function applySite() {
   const mode = document.body.dataset.mode;
-  const name = mode === "lab" ? "实操记录" : mode === "map" ? "思维导图" : state.site.title || "文献卡片";
+  const name = mode === "lab" ? "实操记录" : mode === "course" ? "课程笔记" : mode === "map" ? "思维导图" : state.site.title || "文献卡片";
   $("#brandName").textContent = name;
   document.title = T(name);
 }
@@ -221,7 +253,7 @@ function applySite() {
 function setMode(mode) {
   document.body.dataset.mode = mode;
   $$(".mode-switch a").forEach((a) => (a.dataset.mode === mode ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-  $("#brand").setAttribute("href", mode === "lab" ? "#/lab" : mode === "map" ? "#/map" : "#/");
+  $("#brand").setAttribute("href", { lab: "#/lab", course: "#/course", map: "#/map" }[mode] || "#/");
   store.set("pc-mode", mode);
   applySite();
 }
@@ -243,6 +275,7 @@ async function loadIndex() {
   store.set("pc-recent", fresh);
   updateBadge();
   await lab.loadLogs();
+  await courses.loadCourses();
   await maps.loadMaps();
 }
 
@@ -322,7 +355,8 @@ function lock(expired = false) {
 function updateLockButton() {
   const btn = $("#lockBtn");
   const on = !!state.gh?.unlocked;
-  btn.textContent = on ? "已解锁" : "登录编辑";
+  // On phones only the icon shows; the label is kept for screen readers and wider screens.
+  btn.innerHTML = (on ? `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>` : `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`) + `<span class="nav-label">${on ? "已解锁" : "登录编辑"}</span>`;
   btn.classList.toggle("unlocked", on);
   btn.title = on ? "点击锁定（退出编辑）" : "输入密码后可以编辑";
 }
@@ -386,6 +420,7 @@ async function ensureUnlocked() {
     state.cards.clear();
     lab.clearCache();
     maps.clearCache();
+    courses.clearCache();
     await loadIndex().catch(() => {});
   }
   return !!ok;
@@ -401,7 +436,7 @@ async function route() {
     return;
   }
   const hash = location.hash.replace(/^#\/?/, "");
-  const [name, arg, arg2] = hash.split("/");
+  const [name, arg, arg2, arg3, arg4] = hash.split("/");
   currentHash = location.hash || "#/";
   editorDirty = false;
   window.onbeforeunload = null;
@@ -415,6 +450,24 @@ async function route() {
     } catch (error) {
       console.error(error);
       main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/map">回到全部导图</a></p></div>`;
+    }
+    window.scrollTo(0, 0);
+    return;
+  }
+  // #/course: list; #/course/new; #/course/<id>[/edit]; #/course/<id>/l/<lesson>[/edit].
+  if (name === "course") {
+    setMode("course");
+    $$(".topnav a").forEach((a) => a.removeAttribute("aria-current"));
+    const id = decodeURIComponent(arg || "");
+    try {
+      if (!arg) await courses.list();
+      else if (arg === "new") await courses.edit("");
+      else if (arg2 === "edit") await courses.edit(id);
+      else if (arg2 === "l" && arg3) await (arg4 === "edit" ? courses.lessonEdit(id, decodeURIComponent(arg3)) : courses.lessonView(id, decodeURIComponent(arg3)));
+      else await courses.view(id);
+    } catch (error) {
+      console.error(error);
+      main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/course">回到全部课程</a></p></div>`;
     }
     window.scrollTo(0, 0);
     return;
@@ -445,7 +498,19 @@ const lab = createLab({
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
   route: () => route(),
-  plainEnter, wrapSelection, fileToBase64, shrinkImage: (file) => shrinkImage(file),
+  plainEnter, wrapSelection, fileToBase64, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file),
+  setDirty: (dirty) => { editorDirty = dirty; },
+  isDirty: () => editorDirty,
+  setLeave: (fn) => { leaveEditor = fn; },
+});
+
+const courses = createCourses({
+  state, $, $$, h, renderMarkdown, renderInline, toast, confirmDialog, copyText, typesetMath, store,
+  readData: (path) => readData(path),
+  ensureUnlocked: () => ensureUnlocked(),
+  lock: (expired) => lock(expired),
+  route: () => route(),
+  plainEnter, wrapSelection, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file),
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
   setLeave: (fn) => { leaveEditor = fn; },
@@ -457,13 +522,21 @@ const maps = createMaps({
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
   route: () => route(),
-  plainEnter,
+  plainEnter, sortSelect,
   setDirty: (dirty) => { editorDirty = dirty; },
   setLeave: (fn) => { leaveEditor = fn; },
 });
 
+
+// A "sort by" menu; the choice is remembered per module on this device.
+function sortSelect(id, options, current) {
+  return `<label><span class="visually-hidden">排序</span><select class="inline sort-select" id="${id}" title="排序">${options
+    .map(([v, t]) => `<option value="${v}"${current === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
+}
+
 /* Home */
 async function home() {
+  state.filter.sort ||= store.get("pc-sort-cards") || "read";
   const today = M.todayISO();
   const cards = state.index.cards;
   const s = M.stats(cards, today);
@@ -499,11 +572,13 @@ async function home() {
           ${[["", "全部状态"], ["reading", "在读"], ["done", "读完"], ["questions", "有待解决的"]].map(([v, t]) => `<option value="${v}"${state.filter.status === v ? " selected" : ""}>${t}</option>`).join("")}
         </select></label>
         ${projectSelect()}
+        ${sortSelect("sort", M.CARD_SORTS, state.filter.sort)}
       </div>
       <div class="chips" id="tagChips"></div>
       <div class="card-grid" id="grid"></div>
     </section>`;
   $("#q").addEventListener("input", (e) => { state.filter.query = e.target.value; renderGrid(); });
+  $("#sort").addEventListener("change", (e) => { state.filter.sort = e.target.value; store.set("pc-sort-cards", e.target.value); renderGrid(); });
   $("#status").addEventListener("change", (e) => { state.filter.status = e.target.value; renderGrid(); });
   $("#proj")?.addEventListener("change", (e) => { state.filter.project = e.target.value; renderGrid(); });
   renderTags();
@@ -534,7 +609,7 @@ function renderTags() {
 function renderGrid() {
   const box = $("#grid");
   const all = state.index.cards;
-  const list = M.search(all, state.filter);
+  const list = M.sortCards(M.search(all, state.filter), state.filter.sort);
   if (!all.length) {
     box.innerHTML = `<p class="empty">还没有卡片。点上面的「写一张新卡片」开始。</p>`;
     return;
@@ -704,7 +779,7 @@ async function cardView(id) {
   });
   const titles = new Map(state.index.cards.map((x) => [x.id, x.title]));
   $("#copyMd").onclick = () => copyText(M.cardToMarkdown(c, titles));
-  $$("[data-goto-tag]").forEach((a) => (a.onclick = () => { state.filter = { query: "", tag: a.dataset.gotoTag, project: "", status: "" }; }));
+  $$("[data-goto-tag]").forEach((a) => (a.onclick = () => { state.filter = { ...state.filter, query: "", tag: a.dataset.gotoTag, project: "", status: "" }; }));
   typesetMath(main);
 }
 
@@ -855,7 +930,7 @@ async function editView(id) {
             <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div></div>
           <div class="mark-line">
             <div class="page-step"><button type="button" class="step" data-step="-1" aria-label="上一页">−</button><input class="input page" id="markPage" placeholder="页" maxlength="12" inputmode="numeric" aria-label="页码"><button type="button" class="step" data-step="1" aria-label="下一页">＋</button></div>
-            <input class="input" id="markText" maxlength="300" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done">
+            <textarea class="input grow" id="markText" rows="1" maxlength="300" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done"></textarea>
             <button type="button" class="btn" id="addMark">记下</button></div>
         </div>
         <ol class="marks-list" id="marks"></ol></section>
@@ -933,7 +1008,7 @@ async function editView(id) {
   let markType = M.MARKS[0].type;
   const typeIndex = (t) => M.MARKS.findIndex((m) => m.type === t);
   const markRow = (m) =>
-    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><input class="input" data-k="text" value="${h(m.text)}" aria-label="标记内容"><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「初步解决」里"><input type="checkbox" data-k="solve"${m.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
+    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><textarea class="input grow" data-k="text" rows="1" maxlength="300" aria-label="标记内容">${h(m.text)}</textarea><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「初步解决」里"><input type="checkbox" data-k="solve"${m.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
   $("#marks").innerHTML = card.marks.map(markRow).join("");
   const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === markType)));
   $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { markType = b.dataset.type; paintTypes(); $("#markText").focus(); }));
@@ -949,6 +1024,7 @@ async function editView(id) {
     if (!text) return $("#markText").focus();
     $("#marks").insertAdjacentHTML("beforeend", markRow({ type: markType, page: $("#markPage").value.trim(), text, solve: $("#markSolve").checked }));
     $("#markText").value = "";
+    growBox($("#markText"));
     $("#markSolve").checked = false; // flag each unsolved mark on its own
     $("#markText").focus();
     renderSolve();
@@ -973,7 +1049,7 @@ async function editView(id) {
       ? solveRows.map((r, i) => {
           const page = $("[data-k=page]", r).value.trim();
           return `<li><div class="q">${markSym($(".mark-sym", r).dataset.type)}${page ? `<span class="page">p.${h(page)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
-            <input class="input" data-solve="${i}" value="${h($("[data-k=answer]", r).value)}" placeholder="这个问题的答案，没弄懂就留空" aria-label="答案"></li>`;
+            <textarea class="input grow" data-solve="${i}" rows="1" maxlength="2000" placeholder="这个问题的答案，没弄懂就留空" aria-label="答案">${h($("[data-k=answer]", r).value)}</textarea></li>`;
         }).join("")
       : `<li class="muted small">还没有勾「待解决」的标记。</li>`;
     paintSolveCount();
@@ -1351,7 +1427,7 @@ async function settingsView() {
     <div class="sheet">
       <h2 style="margin-top:0">备份</h2>
       <p class="muted">所有卡片都保存在 GitHub 仓库 <a href="https://github.com/${h(state.gh.repo)}" target="_blank" rel="noopener">${h(state.gh.repo)}</a> 里，每次发布都有历史记录。也可以随时下载一份。</p>
-      <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
+      <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportCourses">下载全部课程笔记（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
     </div>
     <div class="sheet">
       <h2 style="margin-top:0">界面语言</h2>
@@ -1388,7 +1464,8 @@ async function settingsView() {
   const titles = () => new Map(state.index.cards.map((x) => [x.id, x.title]));
   $("#exportMd").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".md", (await loadAll()).map((c) => M.cardToMarkdown(c, titles())).join("\n---\n\n"));
   $("#exportLogs").onclick = async () => download("实操记录-全部-" + M.todayISO() + ".md", (await lab.loadAll()).map((l) => L.logToMarkdown(l, titles())).join("\n---\n\n"));
-  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll(), maps: await maps.loadAll() }, null, 2), "application/json");
+  $("#exportCourses").onclick = async () => download("课程笔记-全部-" + M.todayISO() + ".md", (await courses.loadAll()).map(CO.courseToMarkdown).join("\n---\n\n"));
+  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll(), courses: await courses.loadAll(), maps: await maps.loadAll() }, null, 2), "application/json");
 }
 
 async function changePassword() {
@@ -1551,6 +1628,7 @@ async function boot() {
   addEventListener("hashchange", route);
   if (!location.hash && store.get("pc-mode") === "lab") history.replaceState(null, "", "#/lab");
   if (!location.hash && store.get("pc-mode") === "map") history.replaceState(null, "", "#/map");
+  if (!location.hash && store.get("pc-mode") === "course") history.replaceState(null, "", "#/course");
   route();
 }
 

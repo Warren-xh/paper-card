@@ -12,6 +12,7 @@ export function createMaps(ctx) {
   const main = $("#main");
   state.maps = MM.emptyIndex();
   state.mapCache = new Map();
+  const listFilter = { query: "", sort: store.get("pc-sort-maps") || "updated" };
 
   /* ---------- data ---------- */
   async function loadMaps() {
@@ -63,6 +64,14 @@ export function createMaps(ctx) {
   // What a linked branch shows: the live title of its card or log.
   const cardOf = (id) => state.index.cards.find((x) => x.id === id);
   const logOf = (id) => state.logs.logs.find((x) => x.id === id);
+  const courseOf = (id) => (state.courses?.courses || []).find((x) => x.id === id);
+  const STATUS = { learning: "在学", done: "学完", paused: "暂停" };
+  // Where each branch kind picks from, and what it shows under the title.
+  const SOURCE = {
+    card: { all: () => state.index.cards, of: (id) => cardOf(id), sub: (x) => x.oneLine, done: (x) => x.status === "done" },
+    log: { all: () => state.logs.logs, of: (id) => logOf(id), sub: (x) => x.conclusion, done: (x) => x.status === "done" },
+    course: { all: () => state.courses?.courses || [], of: (id) => courseOf(id), sub: (x) => x.goal || x.teacher, done: (x) => x.status === "done" },
+  };
   function linked(node) {
     if (node.kind === "card") {
       const c = cardOf(node.ref);
@@ -72,9 +81,13 @@ export function createMaps(ctx) {
       const l = logOf(node.ref);
       return l ? { title: l.title || node.text, tip: l.conclusion, status: l.status === "done" ? "完成" : "进行中", href: "#/lab/e/" + l.id } : null;
     }
+    if (node.kind === "course") {
+      const c = courseOf(node.ref);
+      return c ? { title: c.title || node.text, tip: c.goal, status: STATUS[c.status] || "在学", href: "#/course/" + c.id } : null;
+    }
     return null;
   }
-  const titleOf = (kind, ref) => (kind === "card" ? cardOf(ref)?.title : logOf(ref)?.title) || "";
+  const titleOf = (kind, ref) => SOURCE[kind]?.of(ref)?.title || "";
 
   /* ---------- list ---------- */
   async function list() {
@@ -86,13 +99,29 @@ export function createMaps(ctx) {
         <div class="home-actions"><p class="due-none">${maps.length ? `共 ${maps.length} 张导图。` : "新建一张导图，从中心主题开始加分支；分支可以是文字，也可以是论文卡片或实操记录。"}</p>
           <button class="btn primary" id="newMap">新建导图</button></div>
       </div>
-      <section class="map-grid" aria-label="全部导图">${maps.length ? maps.map((x) => `
+      ${maps.length ? `<div class="filters">
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="visually-hidden">搜索导图</span><input type="search" id="mq" placeholder="搜索导图名字和分支…" value="${h(listFilter.query)}"></label>
+        ${ctx.sortSelect("msort", MM.MAP_SORTS, listFilter.sort)}
+      </div>` : ""}
+      <section class="map-grid" id="mapGrid" aria-label="全部导图"></section>`;
+    $("#newMap").onclick = createMap;
+    $("#mq")?.addEventListener("input", (e) => { listFilter.query = e.target.value; renderMaps(); });
+    $("#msort")?.addEventListener("change", (e) => { listFilter.sort = e.target.value; store.set("pc-sort-maps", e.target.value); renderMaps(); });
+    renderMaps();
+  }
+
+  function renderMaps() {
+    const all = state.maps.maps;
+    const maps = MM.sortMaps(MM.searchMaps(all, listFilter.query), listFilter.sort);
+    $("#mapGrid").innerHTML = all.length && !maps.length
+      ? `<p class="empty">没有找到匹配的导图。</p>`
+      : maps.map((x) => `
         <a class="pcard map-tile" href="#/map/${h(x.id)}">
           <p class="pcard-one">${h(x.title || "未命名导图")}</p>
           ${x.branches.length ? `<div class="chips">${x.branches.map((b) => `<span class="chip">${h(b)}</span>`).join("")}</div>` : ""}
-          <div class="pcard-foot"><span>${x.nodes} 个分支${x.cards ? ` · 论文 ${x.cards}` : ""}${x.logs ? ` · 实操 ${x.logs}` : ""}</span><span class="prog">${h((x.updatedAt || "").slice(0, 10))}</span></div>
-        </a>`).join("") : ""}</section>`;
-    $("#newMap").onclick = createMap;
+          <div class="pcard-foot"><span>${x.nodes} 个分支${x.cards ? ` · 论文 ${x.cards}` : ""}${x.logs ? ` · 实操 ${x.logs}` : ""}${x.courses ? ` · 课程 ${x.courses}` : ""}</span><span class="prog">${h((x.updatedAt || "").slice(0, 10))}</span></div>
+        </a>`).join("");
   }
 
   async function createMap() {
@@ -138,12 +167,16 @@ export function createMaps(ctx) {
     let cam = viewState.cam || null; // { x, y, z }
     const undo = [];
     const redo = [];
+    // Find-in-map: matching branches are highlighted; Enter jumps to the next one.
+    let hits = [];
+    let hitAt = -1;
 
     main.innerHTML = `
       <div class="map-page" id="mapPage">
         <div class="map-bar">
           <a class="btn quiet" href="#/map">← 全部导图</a>
           <h1 class="map-title" id="mapTitle"></h1>
+          <div class="map-find"><input type="search" class="input" id="mapFind" placeholder="在图中查找…" aria-label="在图中查找" autocomplete="off"><span class="muted small" id="findCount" aria-live="polite"></span></div>
           <div class="seg map-mode" role="group" aria-label="模式"><button type="button" data-mode="browse">浏览</button><button type="button" data-mode="edit">编辑</button></div>
           <div class="btn-row map-actions">
             <button class="btn quiet small" id="undoBtn" title="撤销（⌘/Ctrl + Z）" data-edit>撤销</button>
@@ -158,7 +191,7 @@ export function createMaps(ctx) {
           <div class="map-canvas" id="canvas" tabindex="0" aria-label="导图画布">
             <div class="map-world" id="world"><svg class="map-edges" id="edges" aria-hidden="true"></svg><div class="map-nodes" id="nodes"></div></div>
             <div class="map-zoom"><button type="button" data-zoom="out" aria-label="缩小">−</button><span id="zoomPct">100%</span><button type="button" data-zoom="in" aria-label="放大">＋</button><button type="button" data-zoom="fit">适应</button><button type="button" data-fold-all="open" data-browse>全部展开</button><button type="button" data-fold-all="close" data-browse>只看主干</button></div>
-            <div class="map-legend" aria-hidden="true"><span class="lg lg-text">文字</span><span class="lg lg-card">论文</span><span class="lg lg-log">实操</span></div>
+            <div class="map-legend" aria-hidden="true"><span class="lg lg-text">文字</span><span class="lg lg-card">论文</span><span class="lg lg-log">实操</span><span class="lg lg-course">课程</span></div>
             <p class="map-tip" id="mapTip"></p>
           </div>
           <aside class="map-panel" id="panel" data-edit></aside>
@@ -230,7 +263,7 @@ export function createMaps(ctx) {
       const label = link ? link.title : n.text || (depth === 0 ? "中心主题" : "（空）");
       const tip = [link?.tip, n.note].filter(Boolean).join("\n\n");
       const hidden = collapsed.has(n.id) ? countHidden(n) : 0;
-      return `<div class="mnode k-${n.kind} d${Math.min(depth, 3)} c-${color || "root"}${n.id === selected && mode === "edit" ? " selected" : ""}${missing ? " missing" : ""}${link ? " linked" : ""}" data-id="${n.id}"${tip ? ` title="${h(tip)}"` : ""}>
+      return `<div class="mnode k-${n.kind} d${Math.min(depth, 3)} c-${color || "root"}${hits.includes(n.id) ? " hit" : ""}${hits[hitAt] === n.id ? " hit-now" : ""}${n.id === selected && mode === "edit" ? " selected" : ""}${missing ? " missing" : ""}${link ? " linked" : ""}" data-id="${n.id}"${tip ? ` title="${h(tip)}"` : ""}>
         ${n.kind !== "text" ? `<span class="mkind">${MM.KINDS[n.kind]}${link ? " · " + link.status : missing ? " · 已删除" : ""}</span>` : ""}
         <span class="mtext">${h(label)}</span>${n.note ? `<span class="mnote" aria-label="有备注">✎</span>` : ""}
         ${n.children.length ? `<button type="button" class="mfold" data-fold="${n.id}" aria-label="${hidden ? "展开" : "折叠"}">${hidden ? "+" + hidden : "−"}</button>` : ""}
@@ -467,7 +500,7 @@ export function createMaps(ctx) {
           ${n.kind === "text"
             ? `<label class="field"><span>文字</span><input class="input" id="nText" maxlength="300" placeholder="分支的文字" value="${h(n.text)}"></label>`
             : `<div class="nlink k-${n.kind}"><span class="mkind">${MM.KINDS[n.kind]}</span><b>${h(link?.title || n.text || "（已删除）")}</b>
-                ${link ? `<a class="small" href="${h(link.href)}">打开</a>` : `<span class="muted small">原${MM.KINDS[n.kind] === "论文" ? "卡片" : "记录"}已删除</span>`}
+                ${link ? `<a class="small" href="${h(link.href)}">打开</a>` : `<span class="muted small">原${{ card: "卡片", log: "记录", course: "课程" }[n.kind]}已删除</span>`}
                 <button type="button" class="btn quiet small" id="unlinkNode">改成文字</button></div>`}
           ${isRoot ? "" : `<div class="field"><span class="label">颜色</span><div class="swatches">${MM.COLORS.map((c) => `<button type="button" class="swatch c-${c || "auto"}" data-color="${c}" aria-pressed="${n.color === c}" title="${MM.COLOR_LABELS[c]}"></button>`).join("")}</div></div>`}
           <label class="field"><span>备注（浏览时悬停可见）</span><textarea class="textarea short" id="nNote" rows="2" maxlength="2000" placeholder="可以留空">${h(n.note)}</textarea></label>
@@ -482,8 +515,8 @@ export function createMaps(ctx) {
           <div class="seg add-kind" role="group" aria-label="分支类型">${Object.entries(MM.KINDS).map(([k, label]) => `<button type="button" data-kind="${k}" aria-pressed="${addKind === k}">${label}</button>`).join("")}</div>
           ${addKind === "text"
             ? `<input class="input" id="addText" maxlength="300" placeholder="输入文字，回车添加" style="margin-top:8px">`
-            : `<input class="input" id="pickQuery" placeholder="搜索${addKind === "card" ? "论文标题、作者" : "记录标题"}…" style="margin-top:8px">
-               <label class="check-row small" style="margin-top:6px"><input type="checkbox" id="onlyDone"${onlyFinished ? " checked" : ""}> 只显示${addKind === "card" ? "读完的论文" : "完成的记录"}</label>
+            : `<input class="input" id="pickQuery" placeholder="搜索${{ card: "论文标题、作者", log: "记录标题", course: "课程名称" }[addKind]}…" style="margin-top:8px">
+               <label class="check-row small" style="margin-top:6px"><input type="checkbox" id="onlyDone"${onlyFinished ? " checked" : ""}> 只显示${{ card: "读完的论文", log: "完成的记录", course: "学完的课程" }[addKind]}</label>
                <div class="pick-list" id="pickList"></div>`}
         </section>
         <p class="hint small">Tab 子分支 · Enter 同级 · Delete 删除 · ⌘Z 撤销 · 把分支拖到另一个分支上可以移动</p>`;
@@ -548,17 +581,18 @@ export function createMaps(ctx) {
       const q = ($("#pickQuery")?.value || "").trim().toLowerCase();
       const terms = q.split(/\s+/).filter(Boolean);
       const refs = MM.linkedRefs(map.root)[addKind];
-      const items = (addKind === "card" ? state.index.cards : state.logs.logs)
-        .filter((x) => !onlyFinished || x.status === "done")
-        .filter((x) => terms.every((t) => [x.title, x.authors, x.oneLine, x.conclusion, (x.tags || []).join(" ")].join(" ").toLowerCase().includes(t)))
+      const src = SOURCE[addKind];
+      const items = src.all()
+        .filter((x) => !onlyFinished || src.done(x))
+        .filter((x) => terms.every((t) => [x.title, x.authors, x.teacher, x.oneLine, x.conclusion, x.goal, (x.tags || []).join(" ")].join(" ").toLowerCase().includes(t)))
         .slice(0, 40);
       box.innerHTML = items.length
         ? items.map((x) => `<button type="button" class="pick k-${addKind}${refs.has(x.id) ? " used" : ""}" data-pick="${h(x.id)}">
-            <b>${h(x.title || x.id)}</b><span>${h((addKind === "card" ? x.oneLine : x.conclusion) || "")}</span>
+            <b>${h(x.title || x.id)}</b><span>${h(src.sub(x) || "")}</span>
             ${refs.has(x.id) ? `<em>已在图中</em>` : ""}</button>`).join("")
-        : `<p class="muted small">${(addKind === "card" ? state.index.cards : state.logs.logs).length ? "没有符合条件的" + (addKind === "card" ? "论文" : "记录") + "。" + (onlyFinished ? "试试取消「只显示…」。" : "") : "还没有" + (addKind === "card" ? "论文卡片" : "实操记录") + "。"}</p>`;
+        : `<p class="muted small">${src.all().length ? "没有符合条件的" + { card: "论文", log: "记录", course: "课程" }[addKind] + "。" + (onlyFinished ? "试试取消「只显示…」。" : "") : "还没有" + { card: "论文卡片", log: "实操记录", course: "课程" }[addKind] + "。"}</p>`;
       $$("[data-pick]", box).forEach((b) => (b.onclick = () => {
-        const item = (addKind === "card" ? cardOf : logOf)(b.dataset.pick);
+        const item = src.of(b.dataset.pick);
         add("child", { fields: { kind: addKind, ref: b.dataset.pick, text: item?.title || "" }, keepSelection: true });
         toast("已添加「" + (item?.title || "").slice(0, 20) + "」。");
       }));
@@ -632,6 +666,33 @@ export function createMaps(ctx) {
       }
     };
     document.addEventListener("keydown", onKey);
+
+    const findBox = $("#mapFind");
+    const paintFind = () => {
+      $("#findCount").textContent = findBox.value.trim() ? (hits.length ? (hitAt >= 0 ? `${hitAt + 1} / ${hits.length}` : `${hits.length} 个`) : "没有找到") : "";
+    };
+    const runFind = () => {
+      hits = MM.findNodes(map.root, findBox.value, titleOf);
+      hitAt = -1;
+      paintFind();
+      render();
+    };
+    const jump = (step) => {
+      if (!hits.length) return;
+      hitAt = (hitAt + step + hits.length) % hits.length;
+      const id = hits[hitAt];
+      MM.ancestors(map.root, id).forEach((a) => collapsed.delete(a)); // unfold the way there
+      if (mode === "edit") selected = id;
+      render(id);
+      center(id);
+      if (mode === "edit") paintPanel();
+      paintFind();
+    };
+    findBox.addEventListener("input", runFind);
+    findBox.addEventListener("keydown", (e) => {
+      if (ctx.plainEnter(e)) { e.preventDefault(); jump(e.shiftKey ? -1 : 1); }
+      else if (e.key === "Escape") { findBox.value = ""; runFind(); canvas.focus(); }
+    });
 
     $("#undoBtn").onclick = () => restore(undo, redo);
     $("#redoBtn").onclick = () => restore(redo, undo);

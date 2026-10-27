@@ -5,12 +5,15 @@ import { tr } from "../js/i18n.mjs";
 import * as M from "../js/model.mjs";
 import * as L from "../js/lab.mjs";
 import * as MM from "../js/mindmap.mjs";
+import * as C from "../js/course.mjs";
 
 test("fixed labels all have English", () => {
   const labels = [
     ...M.MARKS.map((m) => m.label), ...M.SECTIONS.map((s) => s.title), ...Object.values(M.GRADES).map((g) => g.label),
     ...Object.values(M.STATUS_LABELS), ...L.STEPS.map((s) => s.label), ...Object.values(L.STATUS_LABELS),
     ...Object.values(MM.KINDS), ...Object.values(MM.COLOR_LABELS),
+    ...C.MARKS.map((m) => m.label), ...Object.values(C.STATUS_LABELS),
+    ...[M.CARD_SORTS, L.LOG_SORTS, C.COURSE_SORTS, MM.MAP_SORTS].flatMap((list) => list.map(([, label]) => label)),
   ];
   for (const l of labels) assert.ok(tr(l), "missing English for " + l);
 });

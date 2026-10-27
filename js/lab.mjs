@@ -1,6 +1,6 @@
 // Practice logs (实操记录): a lighter companion to paper cards for coding and
 // training sessions. One log per session, kept in data/logs/<id>.json.
-import { validDate, todayISO, normalizeTags, validId, makeId, safeUrl, stripMd } from "./model.mjs";
+import { validDate, todayISO, normalizeTags, validId, makeId, safeUrl, stripMd, sortBy } from "./model.mjs";
 
 export const LOG_DIR = "data/logs/";
 export const LOGS_INDEX_PATH = "data/logs-index.json";
@@ -241,6 +241,23 @@ export function search(logs, { query = "", tag = "", project = "", status = "" }
     const hay = (x.date + " " + x.title + " " + x.conclusion + " " + x.text).toLowerCase();
     return terms.every((t) => hay.includes(t));
   });
+}
+
+export const LOG_SORTS = Object.freeze([
+  ["date", "日期：新→旧"], ["date-asc", "日期：旧→新"], ["updated", "最近修改"], ["hours", "用时最长"], ["open", "待解决最多"], ["title", "标题 A→Z"],
+]);
+
+export function sortLogs(list, key = "date") {
+  const date = (x) => x.date;
+  const updated = (x) => x.updatedAt;
+  switch (key) {
+    case "date-asc": return sortBy(list, [[date, "asc"], [updated, "asc"]]);
+    case "updated": return sortBy(list, [[updated, "desc"]]);
+    case "hours": return sortBy(list, [[(x) => x.hours, "desc"], [date, "desc"]]);
+    case "open": return sortBy(list, [[(x) => x.open || 0, "desc"], [date, "desc"]]);
+    case "title": return sortBy(list, [[(x) => x.title, "asc"]]);
+    default: return sortBy(list, [[date, "desc"], [updated, "desc"]]);
+  }
 }
 
 export function stats(logs, today = todayISO()) {

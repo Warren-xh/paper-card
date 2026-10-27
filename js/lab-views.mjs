@@ -80,6 +80,7 @@ export function createLab(ctx) {
   /* ---------- home ---------- */
   async function home() {
     const logs = state.logs.logs;
+    state.labFilter.sort ||= store.get("pc-sort-logs") || "date";
     const s = L.stats(logs);
     const f = state.labFilter;
     main.innerHTML = `
@@ -105,6 +106,7 @@ export function createLab(ctx) {
             ${[["", "全部状态"], ["doing", "进行中"], ["done", "完成"], ["open", "有待解决的"]].map(([v, t]) => `<option value="${v}"${f.status === v ? " selected" : ""}>${t}</option>`).join("")}
           </select></label>
           ${L.projectList(logs).length ? `<label><span class="visually-hidden">按项目筛选</span><select class="inline" id="lproj"><option value="">全部项目</option>${L.projectList(logs).map(([p, n]) => `<option value="${h(p)}"${f.project === p ? " selected" : ""}>${h(p)}（${n}）</option>`).join("")}</select></label>` : ""}
+          ${ctx.sortSelect("lsort", L.LOG_SORTS, f.sort)}
         </div>
         <div class="chips" id="ltags"></div>
         <div class="log-list" id="llist"></div>
@@ -112,6 +114,7 @@ export function createLab(ctx) {
     $("#lq").addEventListener("input", (e) => { f.query = e.target.value; renderList(); });
     $("#lstatus").addEventListener("change", (e) => { f.status = e.target.value; renderList(); });
     $("#lproj")?.addEventListener("change", (e) => { f.project = e.target.value; renderList(); });
+    $("#lsort").addEventListener("change", (e) => { f.sort = e.target.value; store.set("pc-sort-logs", e.target.value); renderList(); });
     renderTags();
     renderList();
   }
@@ -130,9 +133,12 @@ export function createLab(ctx) {
   function renderList() {
     const box = $("#llist");
     const all = state.logs.logs;
-    const list = L.search(all, state.labFilter);
+    const sort = state.labFilter.sort;
+    const list = L.sortLogs(L.search(all, state.labFilter), sort);
     if (!all.length) return (box.innerHTML = `<p class="empty">还没有记录。</p>`);
     if (!list.length) return (box.innerHTML = `<p class="empty">没有找到匹配的记录。换个关键词，或清除筛选。</p>`);
+    // Month headings only make sense when the list is in date order.
+    if (sort !== "date" && sort !== "date-asc") return (box.innerHTML = list.map(rowHtml).join(""));
     const groups = new Map();
     for (const x of list) {
       const key = (x.date || "0000-00").slice(0, 7);
@@ -330,7 +336,7 @@ export function createLab(ctx) {
           <div class="mark-input">
             <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="记录类型">${L.STEPS.map((s, k) => `<button type="button" role="radio" class="s${k}" data-type="${s.type}" aria-checked="${k === 0}"><b>${s.type}</b>${s.label}</button>`).join("")}</div>
               <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="stepSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="stepText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="stepText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div></div>
-            <div class="mark-line"><input class="input" id="stepText" maxlength="500" placeholder="做了什么、看到什么，回车记下；命令可用 \`反引号\` 包住" aria-label="过程记录" enterkeyhint="done"><button type="button" class="btn" id="addStep">记下</button></div>
+            <div class="mark-line"><textarea class="input grow" id="stepText" rows="1" maxlength="500" placeholder="做了什么、看到什么，回车记下；命令可用 \`反引号\` 包住" aria-label="过程记录" enterkeyhint="done"></textarea><button type="button" class="btn" id="addStep">记下</button></div>
           </div>
           <ol class="marks-list" id="steps"></ol></section>
 
@@ -378,7 +384,7 @@ export function createLab(ctx) {
     let stepType = L.STEPS[0].type;
     const typeIndex = (t) => L.STEPS.findIndex((s) => s.type === t);
     const stepRow = (s) =>
-      `<li data-row="step"><button type="button" class="mark-sym s${typeIndex(s.type)}" data-type="${s.type}" title="${L.stepLabel(s.type)}（点一下换符号）">${s.type}</button><input class="input page" data-k="time" value="${h(s.time)}" placeholder="时间" aria-label="时间" maxlength="5"><input class="input" data-k="text" value="${h(s.text)}" aria-label="记录内容"><input type="hidden" data-k="answer" value="${h(s.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「问题与解决」里"><input type="checkbox" data-k="solve"${s.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
+      `<li data-row="step"><button type="button" class="mark-sym s${typeIndex(s.type)}" data-type="${s.type}" title="${L.stepLabel(s.type)}（点一下换符号）">${s.type}</button><input class="input page" data-k="time" value="${h(s.time)}" placeholder="时间" aria-label="时间" maxlength="5"><textarea class="input grow" data-k="text" rows="1" maxlength="500" aria-label="记录内容">${h(s.text)}</textarea><input type="hidden" data-k="answer" value="${h(s.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「问题与解决」里"><input type="checkbox" data-k="solve"${s.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
     $("#steps").innerHTML = log.steps.map(stepRow).join("");
     const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === stepType)));
     $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { stepType = b.dataset.type; paintTypes(); $("#stepText").focus(); }));
@@ -387,6 +393,7 @@ export function createLab(ctx) {
       if (!text) return $("#stepText").focus();
       $("#steps").insertAdjacentHTML("beforeend", stepRow({ type: stepType, time: L.nowTime(), text, solve: $("#stepSolve").checked }));
       $("#stepText").value = "";
+      ctx.growBox($("#stepText"));
       $("#stepSolve").checked = false; // flag each unsolved step on its own
       $("#stepText").focus();
       renderFixes();
@@ -405,7 +412,7 @@ export function createLab(ctx) {
       fixRows = $$("#steps [data-row]").filter((r) => $("[data-k=solve]", r).checked);
       $("#fixList").innerHTML = fixRows.length
         ? fixRows.map((r, i) => `<li><div class="q">${sym($(".mark-sym", r).dataset.type)}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
-            <input class="input" data-solve="${i}" value="${h($("[data-k=answer]", r).value)}" placeholder="怎么解决的，没解决就留空" aria-label="解决办法"></li>`).join("")
+            <textarea class="input grow" data-solve="${i}" rows="1" maxlength="2000" placeholder="怎么解决的，没解决就留空" aria-label="解决办法">${h($("[data-k=answer]", r).value)}</textarea></li>`).join("")
         : `<li class="muted small">还没有勾「待解决」的记录。</li>`;
       paintFixCount();
     }

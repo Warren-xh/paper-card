@@ -405,6 +405,47 @@ export function search(summaries, { query = "", tag = "", project = "", status =
   });
 }
 
+/* ---------- sorting (shared by every module) ---------- */
+// Chinese titles sort by pinyin, numbers inside text sort as numbers.
+export const collator = new Intl.Collator(["zh-Hans-CN-u-co-pinyin", "en"], { numeric: true, sensitivity: "base" });
+
+// Returns a sorted copy. rules: [[value(x), "asc" | "desc"], ...]; empty values always go last.
+export function sortBy(list, rules) {
+  const empty = (v) => v == null || v === "";
+  return [...list].sort((a, b) => {
+    for (const [get, dir] of rules) {
+      const x = get(a);
+      const y = get(b);
+      if (empty(x) && empty(y)) continue;
+      if (empty(x)) return 1;
+      if (empty(y)) return -1;
+      const c = typeof x === "number" && typeof y === "number" ? x - y : collator.compare(String(x), String(y));
+      if (c) return dir === "desc" ? -c : c;
+    }
+    return 0;
+  });
+}
+
+export const CARD_SORTS = Object.freeze([
+  ["read", "阅读日期：新→旧"], ["read-asc", "阅读日期：旧→新"], ["updated", "最近修改"], ["title", "标题 A→Z"],
+  ["year", "发表年份：新→旧"], ["open", "待解决最多"], ["due", "下次回顾最近"],
+]);
+
+export function sortCards(list, key = "read") {
+  const title = (x) => x.title;
+  const read = (x) => x.readDate;
+  const updated = (x) => x.updatedAt;
+  switch (key) {
+    case "read-asc": return sortBy(list, [[read, "asc"], [title, "asc"]]);
+    case "updated": return sortBy(list, [[updated, "desc"]]);
+    case "title": return sortBy(list, [[title, "asc"]]);
+    case "year": return sortBy(list, [[(x) => x.year, "desc"], [title, "asc"]]);
+    case "open": return sortBy(list, [[(x) => x.questions || 0, "desc"], [read, "desc"]]);
+    case "due": return sortBy(list, [[(x) => (x.status === "done" ? x.due : ""), "asc"], [read, "desc"]]);
+    default: return sortBy(list, [[read, "desc"], [updated, "desc"]]);
+  }
+}
+
 export function tagCounts(summaries) {
   const counts = new Map();
   for (const x of summaries) for (const t of x.tags) counts.set(t, (counts.get(t) || 0) + 1);

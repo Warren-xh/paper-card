@@ -1,14 +1,14 @@
 // Mind maps (思维导图): a tree of branches. A branch is plain text, or points
 // to a paper card or a practice log so the map can jump to it.
 // Maps are stored in data/maps/<id>.json; data/maps-index.json lists them.
-import { validId, makeId, todayISO } from "./model.mjs";
+import { validId, makeId, todayISO, sortBy } from "./model.mjs";
 
 export const MAP_DIR = "data/maps/";
 export const MAPS_INDEX_PATH = "data/maps-index.json";
 export const MAX_NODES = 2000;
 const MAX_DEPTH = 40;
 
-export const KINDS = Object.freeze({ text: "文字", card: "论文", log: "实操" });
+export const KINDS = Object.freeze({ text: "文字", card: "论文", log: "实操", course: "课程" });
 // Branch colours; "" means "pick one by position".
 export const COLORS = Object.freeze(["", "blue", "green", "orange", "red", "purple", "teal", "gray"]);
 export const AUTO_COLORS = Object.freeze(["blue", "orange", "green", "purple", "red", "teal"]);
@@ -39,7 +39,7 @@ function normalizeNode(raw, seen, depth) {
   let id = NODE_ID.test(raw.id) && !seen.has(raw.id) ? raw.id : newNodeId();
   while (seen.has(id)) id = newNodeId();
   seen.add(id);
-  const kind = raw.kind === "card" || raw.kind === "log" ? raw.kind : "text";
+  const kind = raw.kind === "card" || raw.kind === "log" || raw.kind === "course" ? raw.kind : "text";
   const ref = kind !== "text" && validId(raw.ref) ? raw.ref : "";
   const node = {
     id,
@@ -139,7 +139,7 @@ export function moveAmongSiblings(root, id, delta) {
 
 // Which cards and logs a map already points at.
 export function linkedRefs(root) {
-  const out = { card: new Set(), log: new Set() };
+  const out = { card: new Set(), log: new Set(), course: new Set() };
   walk(root, (n) => { if (n.kind !== "text" && n.ref) out[n.kind].add(n.ref); });
   return out;
 }
@@ -212,13 +212,56 @@ export function summarize(map) {
     nodes: countNodes(map.root),
     cards: refs.card.size,
     logs: refs.log.size,
+    courses: refs.course.size,
     branches: map.root.children.map((c) => c.text).filter(Boolean).slice(0, 6),
+    text: (() => { const t = []; walk(map.root, (n) => t.push(n.text, n.note)); return t.filter(Boolean).join(" ").replace(/\s+/g, " ").slice(0, 3000); })(),
     updatedAt: map.updatedAt,
   };
 }
 
 export function emptyIndex() {
   return { version: 1, updatedAt: "", maps: [] };
+}
+
+export const MAP_SORTS = Object.freeze([["updated", "最近修改"], ["title", "标题 A→Z"], ["nodes", "分支最多"]]);
+
+export function sortMaps(list, key = "updated") {
+  if (key === "title") return sortBy(list, [[(x) => x.title, "asc"]]);
+  if (key === "nodes") return sortBy(list, [[(x) => x.nodes || 0, "desc"], [(x) => x.updatedAt, "desc"]]);
+  return sortBy(list, [[(x) => x.updatedAt, "desc"]]);
+}
+
+// Map list search: title, main branches and the text of every branch.
+export function searchMaps(list, query = "") {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return list;
+  return list.filter((x) => {
+    const hay = [x.title, ...(x.branches || []), x.text || ""].join(" ").toLowerCase();
+    return terms.every((t) => hay.includes(t));
+  });
+}
+
+// Find-in-map: ids of branches whose text (or linked title) contains the query.
+export function findNodes(root, query, titleOf = () => "") {
+  const terms = String(query || "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  const hits = [];
+  walk(root, (n) => {
+    const hay = [n.text, n.note, n.kind !== "text" ? titleOf(n.kind, n.ref) : ""].join(" ").toLowerCase();
+    if (terms.every((t) => hay.includes(t))) hits.push(n.id);
+  });
+  return hits;
+}
+
+// Ids of the branches above a node (to unfold them when it is found).
+export function ancestors(root, id) {
+  const path = [];
+  const visit = (n, trail) => {
+    if (n.id === id) { path.push(...trail); return true; }
+    return n.children.some((c) => visit(c, [...trail, n.id]));
+  };
+  visit(root, []);
+  return path;
 }
 
 export function normalizeIndex(raw) {

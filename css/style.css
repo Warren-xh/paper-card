@@ -98,7 +98,17 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .mode-switch { display: inline-flex; flex: none; border: 1px solid var(--rule); border-radius: 999px; background: var(--page); padding: 2px; }
 .mode-switch a { text-decoration: none; color: var(--ink-2); font-size: 14px; padding: 3px 12px; border-radius: 999px; white-space: nowrap; }
 .mode-switch a[aria-current="page"] { background: var(--pen); color: var(--page); font-weight: 600; }
-body[data-mode="lab"] .topnav [data-nav="review"], body[data-mode="map"] .topnav [data-nav="review"] { display: none; }
+body:not([data-mode="cards"]) .topnav [data-nav="review"] { display: none; }
+/* Settings and the lock button show an icon instead of words on phones. */
+.nav-icon { display: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 440px) {
+  .nav-icon { display: block; }
+  .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .topnav [data-nav="settings"] { padding: 6px; }
+  .lock-btn { padding: 5px 7px; display: grid; place-items: center; }
+  #themeBtn { display: none; }
+  .mode-switch a { padding: 3px 8px; font-size: 13.5px; }
+}
 @media (max-width: 440px) { .mode-switch a { padding: 3px 9px; } }
 
 main { max-width: 960px; margin: 0 auto; padding: 28px 16px 96px; outline: none; }
@@ -358,7 +368,12 @@ button.mark-sym { cursor: pointer; }
 .mark-line > .input { flex: 1; min-width: 0; }
 .input.page { width: 64px; flex: none; text-align: center; padding-left: 4px; padding-right: 4px; }
 .marks-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
-.marks-list li { display: flex; gap: 6px; align-items: center; }
+.marks-list li { display: flex; gap: 6px; align-items: flex-start; }
+.marks-list li > .mark-sym, .marks-list li > .row-flag, .marks-list li > .x { margin-top: 5px; }
+/* One-line boxes that wrap and grow, so long marks stay fully visible. */
+textarea.input.grow { display: block; resize: none; overflow: hidden; min-height: 38px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--sans); }
+.marks-list textarea.input.grow { min-height: 34px; }
+.mark-line { align-items: flex-start; }
 .marks-list .input { padding: 5px 8px; font-size: 15px; }
 .marks-list .input:not(.page) { flex: 1; }
 .marks-list .input.page { width: 52px; }
@@ -470,6 +485,11 @@ body.wide main { max-width: none; padding: 10px 12px 0; }
 .map-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .map-title { flex: 1 1 160px; min-width: 0; margin: 0; font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-mode button { padding: 6px 14px; }
+.map-find { display: flex; align-items: center; gap: 6px; flex: 0 1 220px; min-width: 140px; }
+.map-find .input { padding: 6px 10px; font-size: 14px; }
+.map-find .small { white-space: nowrap; }
+.mnode.hit { box-shadow: 0 0 0 3px color-mix(in srgb, var(--marker) 80%, transparent); }
+.mnode.hit-now { box-shadow: 0 0 0 4px var(--marker), 0 0 0 6px var(--ink); }
 .map-page[data-mode="browse"] [data-edit], .map-page[data-mode="edit"] [data-browse] { display: none !important; }
 .map-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .map-page[data-mode="edit"] .map-main { grid-template-columns: minmax(0, 1fr) 330px; }
@@ -555,3 +575,38 @@ body.wide main { max-width: none; padding: 10px 12px 0; }
   .brand { display: none; }
   .topbar-inner { justify-content: space-between; }
 }
+
+/* ---------- Courses ---------- */
+.status.s-paused { color: var(--pencil); }
+.progress { height: 6px; border-radius: 999px; background: var(--paper); border: 1px solid var(--rule); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--ok); border-radius: 999px; }
+.course-tile .progress { margin: 2px 0 0; }
+.course-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 16px; }
+.course-progress .progress { flex: 1 1 160px; height: 8px; }
+.course-progress > span { color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.lesson-list { list-style: none; padding: 0; margin: 0; display: grid; }
+.lesson-list > li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-bottom: 1px dashed var(--rule); }
+.lesson-check { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--rule); background: var(--page); color: var(--ink-2); cursor: pointer; font-weight: 700; font-size: 13px; padding: 0; font-variant-numeric: tabular-nums; }
+.lesson-check:hover { border-color: var(--ok); color: var(--ok); }
+.lesson-list > li.done .lesson-check { background: var(--ok); border-color: var(--ok); color: var(--page); }
+.lesson-title { font-weight: 600; text-decoration: none; color: var(--ink); }
+.lesson-title:hover { color: var(--pen); text-decoration: underline; }
+.lesson-list > li.done .lesson-title { color: var(--ink-2); }
+.lesson-main p { margin: 2px 0 0; color: var(--ink-2); font-size: 14.5px; }
+.lesson-main .facts { margin-top: 4px; }
+.lesson-edit { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.lesson-edit li { display: flex; align-items: center; gap: 6px; }
+.lesson-edit .lnum { width: 26px; text-align: right; color: var(--pencil); font-size: 13px; flex: none; font-variant-numeric: tabular-nums; }
+.lesson-edit .input { flex: 1; min-width: 0; padding: 7px 9px; }
+.lesson-edit .btn.quiet { padding: 4px 6px; }
+.input.time-input { width: 68px; flex: none; text-align: center; font-variant-numeric: tabular-nums; }
+.marks-list .input.time-input { width: 62px; }
+@media (max-width: 440px) { .marks-list .input.time-input { width: 52px; } }
+/* Course branches in mind maps */
+:root { --kind-course: #7b4fb8; --kind-course-bg: #f1e9fb; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --kind-course: #c9a7f5; --kind-course-bg: #2c2140; } }
+:root[data-theme="dark"] { --kind-course: #c9a7f5; --kind-course-bg: #2c2140; }
+.mnode.k-course { border: 1.5px solid var(--bc); border-left: 5px solid var(--kind-course); border-radius: 8px; padding-top: 4px; background: color-mix(in srgb, var(--kind-course-bg) 70%, var(--page)); }
+.k-course .mkind, .nlink.k-course .mkind { color: var(--kind-course); }
+.lg-course { border-left: 4px solid var(--kind-course); }
+.pick.k-course { border-left-color: var(--kind-course); }

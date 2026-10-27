@@ -3,6 +3,17 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.0 — 2026-10-27
+
+- 新增课程笔记（顶栏「课程」）：课程含多节课，每课边看边记带视频时间点的标记、待解决与答案、一句话和笔记；进度条、快速标记看完、继续下一课、学完总结。
+  Course notes (**Courses** in the top bar): lessons with time-stamped marks, open questions and answers, a one-liner and notes; progress bar, quick “watched” toggle, continue to the next lesson, course takeaways.
+- 所有模块的列表都能搜索和排序；导图里可以「在图中查找」，导图分支可以是课程。
+  Search and sort on every list; **Find in map** inside a mind map; courses can be map branches.
+- 阅读标记、过程记录、答案等一行输入框改为自动换行、自动变高，长文字不再被挡住。
+  One-line boxes (reading marks, log entries, answers) now wrap and grow, so long text stays visible.
+- 手机上顶栏的「设置」和登录按钮改为图标，四个模式也能放在一行。
+  On phones, Settings and the sign-in button become icons so all four modes fit on one line.
+
 ## v3.1 — 2026-10-22
 
 - 界面可切换英文（默认中文）：顶栏「EN / 中」或「设置 → 界面语言」；只翻译界面，不翻译你写的内容。
