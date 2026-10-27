@@ -109,3 +109,33 @@ test("find in a mind map, and course branches", () => {
   assert.equal(MM.summarize(n).courses, 1);
   assert.match(MM.summarize(n).text, /注意力机制/);
 });
+
+test("lesson materials are kept only at their own place", () => {
+  const dir = C.materialDir(ID, "abc123");
+  assert.equal(dir, "materials/" + ID + "/abc123/");
+  const c = C.normalizeCourse({
+    id: ID, title: "CS329",
+    lessons: [{ id: "abc123", title: "L01", files: [
+      { path: dir + "课件 L01.pdf", size: 2048 },
+      { path: dir + "截图.png", size: -5 },
+      { path: dir + "课件 L01.pdf", size: 1 },
+      { path: dir + "../secret.txt" },
+      { path: dir + "a/b.txt" },
+      { path: "code/" + ID + "/x.py" },
+      { path: "materials/nope/abc123/x.pdf" },
+      null,
+    ] }],
+  });
+  const files = c.lessons[0].files;
+  assert.deepEqual(files.map((f) => f.path), [dir + "课件 L01.pdf", dir + "截图.png"]);
+  assert.deepEqual(files.map((f) => f.size), [2048, 0]);
+  assert.equal(C.materialName(files[0].path), "课件 L01.pdf");
+  assert.ok(C.isPdfFile(files[0].path) && C.isImageFile(files[1].path) && !C.isImageFile(files[0].path));
+  assert.deepEqual(C.coursePaths(c), files.map((f) => f.path));
+  assert.deepEqual(C.emptyLesson().files, []);
+  // Old lessons without materials still load.
+  assert.deepEqual(C.normalizeLesson({ id: "old1", title: "旧课时" }).files, []);
+  // File names are searchable and listed in the Markdown export.
+  assert.match(C.summarize(c).text, /课件 L01\.pdf/);
+  assert.match(C.courseToMarkdown(c), /课件与资料：\n- \[课件 L01\.pdf\]\(materials\//);
+});

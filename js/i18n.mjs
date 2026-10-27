@@ -216,6 +216,15 @@ const EXACT = {
   "删除课程": "Delete course", "这一课的标题": "Lesson title", "课时标题": "Lesson title", "删除这一课": "Delete this lesson", "删除这一课？": "Delete this lesson?",
   "这一课已经有笔记，保存后会一起删除。": "This lesson has notes; they will be deleted when you save.", "先写上课程名称再保存。": "Add a course name before saving.",
   "删除这门课程？": "Delete this course?",
+  "这一课已经有笔记或资料，保存后会一起删除。": "This lesson has notes or materials; they will be deleted when you save.",
+  "插入图片（也可以直接 Ctrl+V 粘贴截图）": "Insert image (or paste a screenshot with Ctrl+V)", "可以直接 Ctrl+V 粘贴截图": "Paste screenshots with Ctrl+V",
+  "课件与资料": "Slides & materials", "上传文件": "Upload files", "边看边记（可选）": "Notes while watching (optional)", "有笔记": "Has notes",
+  "这一课的笔记": "Notes for this lesson", "这一课还没有笔记和资料。": "This lesson has no notes or materials yet.", "开始记笔记": "Start taking notes",
+  "点任意一课进去看笔记和资料；点左边的圆圈标成看完了。": "Open any lesson to see its notes and materials; click the circle on the left to mark it watched.",
+  "还没有课时。点「＋ 新的一课」开始记第 1 课；也可以在「编辑课程」里一次列出全部课时的标题。": "No lessons yet. Click “＋ New lesson” to start lesson 1, or list all lesson titles at once under “Edit course”.",
+  "这里只列每一课的标题，比如「Agent 概览」。笔记、截图和课件保存后在课程页点进每一课里写和上传。": "Only list each lesson's title here, e.g. “Agent overview”. After saving, open each lesson on the course page to write notes and upload screenshots and slides.",
+  "这一课的要点、公式、推导、代码都写在这里。支持 Markdown，公式用 $…$。截图可以直接 Ctrl+V 粘贴，或点「插入图片」。": "Key points, formulas, derivations and code for this lesson. Markdown works; write formulas as $…$. Paste screenshots with Ctrl+V, or click “Insert image”.",
+  "课件 PDF、PPT、讲义、图片、代码等。选好后马上存进 GitHub 仓库的 materials/ 文件夹，在这一课的页面可以打开和下载；也可以把文件直接拖到这里。同名文件再传会覆盖。仓库是公开的，别传私密文件。单个文件最大 25 MB。": "Slide PDFs, PPTs, handouts, images, code and more. Files are stored right away in the materials/ folder of your GitHub repository and can be opened and downloaded from the lesson page; you can also drag files here. Uploading a file with the same name replaces it. The repository is public, so don't upload private files. Up to 25 MB per file.",
   "课程和所有课时笔记都会删除，网站上不再显示。需要时仍可以从 GitHub 的历史记录里找回。": "The course and all its lesson notes will be deleted and no longer show on the site. You can still recover them from the GitHub history.",
   "这一课视频的网址": "URL of this lesson's video", "学习日期": "Date studied", "进度": "Progress",
   "写下视频时间（分:秒），选一个符号，写几个字，回车记下一条。时间会保留，接着改就行。没听懂的勾上「待解决」，看完后在下面写答案。": "Enter the video time (m:ss), pick a symbol, type a few words and press Enter. The time stays, so just change it as you go. Tick “Open” for anything unclear and answer it below after watching.",
@@ -307,6 +316,11 @@ const TEMPLATES = [
   [/^(\d+) 课 · 已看 (\d+)$/, (n, d) => `${plural(n, "lesson", "lessons")} · ${d} watched`],
   [/^已添加 (\d+) 课。$/, (n) => `Added ${plural(n, "lesson", "lessons")}.`],
   [/^(\d+) 个$/, (n) => `${n} found`],
+  [/^(\d+) 个资料$/, (n) => plural(n, "file", "files")],
+  [/^(\d+) 个 · (.+)$/, (n, s) => `${plural(n, "file", "files")} · ${s}`],
+  [/^已插入 (\d+) 张图片，保存时一起上传。$/, (n) => `Inserted ${n} images; they are uploaded when you save.`],
+  [/^没有可上传的文件（跳过了 (\d+) 个：可能含密钥或超过 25 MB）。$/, (n) => `Nothing to upload (skipped ${n}: may contain secrets or larger than 25 MB).`],
+  [/^已上传 (\d+) 个文件(?:，跳过 (\d+) 个)?。记得点「保存」。$/, (n, s) => `Uploaded ${plural(n, "file", "files")}${s ? `, skipped ${s}` : ""}. Remember to click “Save”.`],
 ];
 
 const isCJK = /[㐀-鿿＀-￯　-〿]/;

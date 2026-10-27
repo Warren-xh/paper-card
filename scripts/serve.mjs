@@ -5,7 +5,7 @@
 //     Nothing is sent to GitHub; all mock commits vanish when the server stops.
 import http from "node:http";
 import { readFile, readdir, stat } from "node:fs/promises";
-import { extname, join, normalize, relative } from "node:path";
+import { extname, join, posix, relative } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -28,7 +28,7 @@ async function seed() {
       if (name.startsWith(".") || name === "node_modules") continue;
       const full = join(dir, name);
       if ((await stat(full)).isDirectory()) await walk(full);
-      else files.set(relative(root, full), putBlob(await readFile(full)));
+      else files.set(relative(root, full).replaceAll("\\", "/"), putBlob(await readFile(full)));
     }
   }
   await walk(root);
@@ -126,10 +126,10 @@ http
       return mockApi(req, res, path.slice("/__mock_github".length));
     }
     if (path.endsWith("/")) path += "index.html";
-    const rel = normalize(path).replace(/^\/+/, "");
+    const rel = posix.normalize(path).replace(/^\/+/, "");
     if (rel.startsWith("..")) { res.writeHead(403); return res.end(); }
     try {
-      const data = (mock && (rel.startsWith("data/") || rel.startsWith("uploads/") || rel.startsWith("papers/") || rel.startsWith("code/")) && mockStatic(rel)) || (await readFile(join(root, rel)));
+      const data = (mock && (rel.startsWith("data/") || rel.startsWith("uploads/") || rel.startsWith("papers/") || rel.startsWith("code/") || rel.startsWith("materials/")) && mockStatic(rel)) || (await readFile(join(root, rel)));
       const type = types[extname(rel)] || "application/octet-stream";
       res.writeHead(200, { "Content-Type": type + (type.startsWith("text/") || type.endsWith("json") ? "; charset=utf-8" : ""), "Cache-Control": "no-store" });
       res.end(data);

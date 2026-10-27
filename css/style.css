@@ -610,3 +610,16 @@ body.wide main { max-width: none; padding: 10px 12px 0; }
 .k-course .mkind, .nlink.k-course .mkind { color: var(--kind-course); }
 .lg-course { border-left: 4px solid var(--kind-course); }
 .pick.k-course { border-left-color: var(--kind-course); }
+/* v4.1: lesson numbers, materials, images in one-line marks, paste hint */
+.lesson-n { display: inline-block; margin-right: 8px; padding: 0 7px; border-radius: 999px; background: var(--paper); border: 1px solid var(--rule); color: var(--ink-2); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.material-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0 18px; }
+.material-images a { display: grid; gap: 4px; text-decoration: none; color: var(--ink-2); font-size: 12.5px; min-width: 0; }
+.material-images img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid var(--rule); border-radius: 4px; background: #fff; }
+.material-images span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#materials.drop { outline: 2px dashed var(--pen); outline-offset: 6px; border-radius: 4px; }
+.empty-lesson { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+.empty-lesson p { margin: 0; }
+.paste-hint { margin: 0 0 0 4px; }
+.step-view figure.md-img, .solve-view figure.md-img, .marks-view figure.md-img, .mark-view figure.md-img { margin: 6px 0; }
+figure.md-img img { max-width: 100%; height: auto; }
+.step-view figure.md-img img, .solve-view figure.md-img img { max-height: 320px; border: 1px solid var(--rule); border-radius: 4px; display: block; background: #fff; }

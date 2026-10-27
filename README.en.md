@@ -4,9 +4,9 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.0** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.1** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
-> **Note**: `data/`, `papers/`, `code/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
+> **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
 ---
 
@@ -50,7 +50,10 @@ The **Papers | Lab | Courses | Maps** switch in the top bar moves between four m
 **Courses — course notes**
 
 - A course holds its lessons: teacher / platform, link and why you're taking it. Add all lessons at once (one per line) and reorder them any time.
-- Each lesson has its own notes: marks with the **video time** while you watch (`?` unclear, `!` key point, `★` useful, `✎` note); tick **Open** on anything unclear and answer it afterwards; plus a one-line summary and free notes (images and formulas welcome).
+- The course page lists “Lesson 1, Lesson 2, …”; open any lesson for:
+  - **Notes**: key points, formulas, code and screenshots (paste screenshots with Ctrl+V).
+  - **Slides & materials**: upload slide PDFs, PPTs, handouts, images and more (or drag them in); open or download them from the lesson page, with images shown as thumbnails.
+  - **Notes while watching** (optional): marks with the **video time** (`?` unclear, `!` key point, `★` useful, `✎` note); tick **Open** on anything unclear and answer it afterwards; plus a one-line summary.
 - The course page shows a progress bar and the lesson list — click a circle to mark a lesson watched; **Continue** jumps to the next unwatched lesson. Write your takeaways when you finish.
 
 **Maps — mind maps**
@@ -58,6 +61,8 @@ The **Papers | Lab | Courses | Maps** switch in the top bar moves between four m
 - Branches can be text, a paper card, a practice log or a course; each kind looks different so they're easy to tell apart.
 - **Browse mode**: drag to move, zoom, fold branches, click a paper, practice or course branch to open it; **Find in map** highlights matching branches and Enter jumps between them.
 - **Edit mode**: add branches, pick colours, write notes, drag a branch onto another to move it; undo and keyboard shortcuts.
+
+**Images**: every notes box in every module has an **Insert image** button; you can also **paste a screenshot with Ctrl+V** or drag an image in, including into one-line marks and log entries. Images are compressed in the browser and uploaded when you save.
 
 **Also**: one-line boxes such as reading marks and log entries grow with their text, so long entries stay fully visible; drafts are saved on your device; every save is a Git commit, so mistakes can be undone from the history; export everything as Markdown or JSON; light and dark themes; works on phones.
 
@@ -147,7 +152,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.0"
+git commit -m "Paper Cards v4.1"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -158,7 +163,7 @@ Then continue with “Step 4: Turn on GitHub Pages” and the first-time setup.
 
 ## Updating to a new version
 
-Your content lives in `data/`, `papers/`, `code/` and `uploads/`. When updating, **replace only the code and leave those folders alone**:
+Your content lives in `data/`, `papers/`, `code/`, `materials/` and `uploads/`. When updating, **replace only the code and leave those folders alone**:
 
 1. Download and unzip the new release package.
 2. Upload these to your repository, replacing the old ones: `index.html`, `css/`, `js/`, `scripts/`, `tests/`, `package.json`, `README.md`, `README.en.md`, `CHANGELOG.md`, `LICENSE`.
@@ -218,6 +223,7 @@ Every save is a Git commit, so GitHub keeps the full history. You can also downl
 | `data/vault.json` | The encrypted access token (created by the first-time setup) |
 | `papers/` | Uploaded paper PDFs |
 | `code/<log id>/` | Code uploaded to practice logs |
+| `materials/<course id>/<lesson id>/` | Slides and materials uploaded to each lesson of a course |
 | `uploads/` | Inserted images |
 
 ## What's in this repository
@@ -228,7 +234,7 @@ Every save is a Git commit, so GitHub keeps the full history. You can also downl
 | `scripts/` | Local preview server, index rebuild script |
 | `tests/` | Unit tests |
 | `backup/` | Release packages of each version |
-| `data/`, `papers/`, `code/`, `uploads/` | The author's own content (don't copy these when deploying) |
+| `data/`, `papers/`, `code/`, `materials/`, `uploads/` | The author's own content (don't copy these when deploying) |
 
 ---
 
@@ -265,4 +271,4 @@ Main files:
 
 The website code is released under the [MIT License](LICENSE), copyright © 2026 Warren-xh. You may use, copy, modify and distribute it, including commercially, as long as the copyright notice and license text stay with your copies. The software is provided “as is”, without warranty of any kind.
 
-The MIT License covers the website code only. The author's personal content in `data/`, `papers/`, `code/` and `uploads/` of this repository is **not** covered; uploaded paper PDFs remain the property of their authors and publishers. Whatever you write on your own deployment belongs to you.
+The MIT License covers the website code only. The author's personal content in `data/`, `papers/`, `code/`, `materials/` and `uploads/` of this repository is **not** covered; uploaded paper PDFs remain the property of their authors and publishers. Whatever you write on your own deployment belongs to you.

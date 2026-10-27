@@ -14,5 +14,5 @@ Each package is a complete site — all the code plus an empty set of data, **wi
 **部署步骤见 [README.md](../README.md#部署自己的网站约-10-分钟不用装软件)。**
 **For deployment steps see [README.en.md](../README.en.md#deploy-your-own-site-about-10-minutes-nothing-to-install).**
 
-旧版本的部署步骤与 v4.0 相同；更新已有网站时只覆盖代码文件，不要覆盖 `data/`、`uploads/`、`papers/`、`code/`。
-Older versions deploy the same way. When updating an existing site, replace only the code; never overwrite `data/`, `uploads/`, `papers/` or `code/`.
+旧版本的部署步骤与 v4.0 相同；更新已有网站时只覆盖代码文件，不要覆盖 `data/`、`uploads/`、`papers/`、`code/`、`materials/`。
+Older versions deploy the same way. When updating an existing site, replace only the code; never overwrite `data/`, `uploads/`, `papers/`, `code/` or `materials/`.

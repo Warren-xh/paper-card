@@ -1,11 +1,15 @@
 // Courses (课程): notes taken while watching a course. A course holds its
-// lessons; each lesson has time-stamped marks, a one-liner and free notes.
+// lessons; each lesson has notes, uploaded materials (slides, handouts, images),
+// time-stamped marks and a one-liner.
 // One file per course in data/courses/<id>.json; data/courses-index.json lists them.
+// Materials are stored at materials/<course id>/<lesson id>/<file name>.
 import { validDate, todayISO, normalizeTags, validId, makeId, safeUrl, stripMd, sortBy } from "./model.mjs";
 
 export const COURSE_DIR = "data/courses/";
 export const COURSES_INDEX_PATH = "data/courses-index.json";
 export const MAX_LESSONS = 300;
+export const MATERIAL_DIR = "materials/";
+export const MAX_MATERIALS = 100;
 
 export const STATUS_LABELS = { learning: "在学", done: "学完", paused: "暂停" };
 
@@ -44,8 +48,25 @@ export function newLessonId(random = Math.random) {
 export const newCourseId = (title, date = todayISO(), random = Math.random) => makeId(date, title, random, "course");
 
 export function emptyLesson(fields = {}) {
-  return { id: newLessonId(), title: "", link: "", date: "", done: false, oneLine: "", marks: [], notes: "", ...fields };
+  return { id: newLessonId(), title: "", link: "", date: "", done: false, oneLine: "", marks: [], notes: "", files: [], ...fields };
 }
+
+/* ---------- materials ---------- */
+export const materialDir = (courseId, lessonId) => MATERIAL_DIR + courseId + "/" + lessonId + "/";
+
+const BAD_NAME = /[\x00-\x1f\\/:*?"<>|]/;
+export function validMaterialPath(path) {
+  if (typeof path !== "string" || path.length > 300 || !path.startsWith(MATERIAL_DIR)) return false;
+  const [course, lesson, name, ...rest] = path.slice(MATERIAL_DIR.length).split("/");
+  return !rest.length && validId(course) && LESSON_ID.test(lesson) && !!name && name !== "." && name !== ".." && !BAD_NAME.test(name);
+}
+
+export const materialName = (path) => path.split("/").pop();
+export const isImageFile = (path) => /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(path);
+export const isPdfFile = (path) => /\.pdf$/i.test(path);
+
+// Every material file of a course (for deleting it).
+export const coursePaths = (course) => course.lessons.flatMap((l) => l.files.map((f) => f.path));
 
 export function emptyCourse(id = "") {
   return {
@@ -89,6 +110,11 @@ export function normalizeLesson(raw, seen = new Set()) {
       .filter((m) => m.text)
       .slice(0, 300),
     notes: str(raw.notes, 50000),
+    files: (Array.isArray(raw.files) ? raw.files : [])
+      .filter((f) => validMaterialPath(f?.path))
+      .map((f) => ({ path: f.path, size: Number.isFinite(f.size) && f.size >= 0 ? Math.round(f.size) : 0 }))
+      .filter((f, i, all) => all.findIndex((x) => x.path === f.path) === i)
+      .slice(0, MAX_MATERIALS),
   };
 }
 
@@ -147,7 +173,7 @@ export const marksByTime = (marks) =>
 export function plainText(c) {
   return [
     c.title, c.teacher, c.project, c.tags.join(" "), c.goal, stripMd(c.summary),
-    ...c.lessons.map((l) => [l.title, l.oneLine, l.marks.map((m) => m.text + " " + m.answer).join(" "), stripMd(l.notes)].join(" ")),
+    ...c.lessons.map((l) => [l.title, l.oneLine, l.marks.map((m) => m.text + " " + m.answer).join(" "), stripMd(l.notes), l.files.map((f) => materialName(f.path)).join(" ")].join(" ")),
   ]
     .join(" ")
     .replace(/\s+/g, " ")
@@ -264,6 +290,7 @@ export function lessonToMarkdown(l, n) {
   if (l.oneLine) out.push("> " + l.oneLine);
   if (l.marks.length) out.push(marksByTime(l.marks).map(markLine).join("\n"));
   if (l.notes.trim()) out.push(l.notes.trim());
+  if (l.files.length) out.push("课件与资料：\n" + l.files.map((f) => "- [" + materialName(f.path) + "](" + f.path + ")").join("\n"));
   return out.join("\n\n");
 }
 

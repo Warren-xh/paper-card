@@ -41,3 +41,12 @@ test("people's own words are never translated", () => {
   assert.equal(tr("已添加「注意力」。"), "Added “注意力”.");
   assert.equal(tr("Already English"), null);
 });
+
+test("course materials and image paste have English", () => {
+  assert.equal(tr("3 个资料"), "3 files");
+  assert.equal(tr("2 个 · 1.5 MB"), "2 files · 1.5 MB");
+  assert.equal(tr("已上传 2 个文件，跳过 1 个。记得点「保存」。"), "Uploaded 2 files, skipped 1. Remember to click “Save”.");
+  assert.equal(tr("已上传 1 个文件。记得点「保存」。"), "Uploaded 1 file. Remember to click “Save”.");
+  assert.equal(tr("已插入 3 张图片，保存时一起上传。"), "Inserted 3 images; they are uploaded when you save.");
+  for (const s of ["课件与资料", "上传文件", "开始记笔记", "可以直接 Ctrl+V 粘贴截图", "插入图片（也可以直接 Ctrl+V 粘贴截图）"]) assert.ok(tr(s), "missing English for " + s);
+});

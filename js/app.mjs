@@ -9,7 +9,7 @@ import { createCourses } from "./course-views.mjs";
 import * as CO from "./course.mjs";
 import { startTranslation, getLang, setLang, LANGS } from "./i18n.mjs";
 
-export const VERSION = "4.0";
+export const VERSION = "4.1";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -115,6 +115,77 @@ document.addEventListener("keydown", (e) => {
 
 // Fields whose text is rendered as Markdown, so bold/italic show up.
 const FORMATTABLE = "#markText, [data-k=text], [data-solve], textarea:not([name=oneLine]):not(.short)";
+
+// Text boxes where an image can go (button, Ctrl+V paste, drag and drop): every
+// box shown as Markdown, plus the one-line marks and steps.
+const IMAGE_FIELDS = "#markText, #stepText, [data-k=text], [data-solve], textarea.textarea:not(.one):not(.short):not(.code)";
+const imageButton = (name) => `<button type="button" class="btn quiet small" data-image="${name}" title="插入图片（也可以直接 Ctrl+V 粘贴截图）">插入图片</button>`;
+const mdTools = (name) =>
+  `<div class="md-tools"><button type="button" class="fmt" data-fmt="**" data-for="${name}" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="${name}" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${imageButton(name)}<span class="hint small paste-hint">可以直接 Ctrl+V 粘贴截图</span></div>`;
+
+// Images are resized in the browser and kept in `images` (path → data URL) until
+// the editor saves; a Markdown image line is put where the cursor is.
+function enableImages(form, images) {
+  const pick = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true, hidden: true });
+  form.append(pick);
+  let target = null;
+  const onlyImages = (files) => [...files].filter((f) => f && f.type.startsWith("image/"));
+  async function insert(area, files) {
+    for (const file of files) {
+      try {
+        const dataUrl = await shrinkImage(file);
+        const day = M.todayISO();
+        const path = "uploads/" + day.slice(0, 7) + "/" + day.replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 8) + "." + (dataUrl.startsWith("data:image/webp") ? "webp" : "jpg");
+        images[path] = dataUrl;
+        const raw = (file.name || "").replace(/\.[^.]+$/, "").replace(/[[\]]/g, "");
+        const image = "![" + (!raw || /^image$/i.test(raw) ? "截图" : raw) + "](" + path + ")";
+        const start = area.selectionStart ?? area.value.length;
+        const before = area.value.slice(0, start);
+        // One-line boxes never take a line break.
+        const snippet = area.classList.contains("grow")
+          ? (before && !/\s$/.test(before) ? " " : "") + image + " "
+          : (before && !before.endsWith("\n") ? "\n" : "") + image + "\n";
+        area.setRangeText(snippet, start, area.selectionEnd ?? start, "end");
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+      } catch (error) {
+        return toast(error.message, "error");
+      }
+    }
+    area.focus();
+    toast(files.length > 1 ? `已插入 ${files.length} 张图片，保存时一起上传。` : "图片已插入，保存时一起上传。");
+  }
+  form.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-image]");
+    if (!b) return;
+    target = form.querySelector(`[name="${b.dataset.image}"]`) || form.querySelector("#" + b.dataset.image);
+    pick.click();
+  });
+  pick.onchange = () => {
+    const files = onlyImages(pick.files);
+    pick.value = "";
+    if (target && files.length) insert(target, files);
+  };
+  form.addEventListener("paste", (e) => {
+    if (!e.target.matches?.(IMAGE_FIELDS)) return;
+    const files = onlyImages([...(e.clipboardData?.items || [])].filter((i) => i.kind === "file").map((i) => i.getAsFile()));
+    if (!files.length) return;
+    e.preventDefault();
+    insert(e.target, files);
+  });
+  form.addEventListener("dragover", (e) => { if (e.target.matches?.(IMAGE_FIELDS) && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
+  form.addEventListener("drop", (e) => {
+    if (!e.target.matches?.(IMAGE_FIELDS)) return;
+    const files = onlyImages(e.dataTransfer.files);
+    if (!files.length) return;
+    e.preventDefault();
+    insert(e.target, files);
+  });
+}
+// Images still referenced anywhere in what is being saved.
+const usedImages = (images, saved) => {
+  const text = JSON.stringify(saved);
+  return Object.entries(images).filter(([path]) => text.includes(path));
+};
 
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -498,7 +569,7 @@ const lab = createLab({
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
   route: () => route(),
-  plainEnter, wrapSelection, fileToBase64, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file),
+  plainEnter, wrapSelection, fileToBase64, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file), enableImages, usedImages, mdTools, imageButton,
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
   setLeave: (fn) => { leaveEditor = fn; },
@@ -510,7 +581,7 @@ const courses = createCourses({
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
   route: () => route(),
-  plainEnter, wrapSelection, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file),
+  plainEnter, wrapSelection, fileToBase64, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file), enableImages, usedImages, mdTools, imageButton,
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
   setLeave: (fn) => { leaveEditor = fn; },
@@ -887,8 +958,7 @@ async function editView(id) {
   const projects = M.projectList(state.index.cards).map(([p]) => p);
   const allTags = M.tagCounts(state.index.cards).map(([t]) => t);
   const sec = (n) => M.SECTIONS[n - 1];
-  const tools = (name, image = false) =>
-    `<div class="md-tools"><button type="button" class="fmt" data-fmt="**" data-for="${name}" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="${name}" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${image ? `<button type="button" class="btn quiet small" data-image="${name}">插入图片</button>` : ""}</div>`;
+  const tools = mdTools;
   const secHead = (n, hint) => `<h3><span class="num">${sec(n).mark}</span>${sec(n).title}</h3>${hint ? `<p class="hint">${hint}</p>` : ""}`;
 
   main.innerHTML = `
@@ -927,7 +997,7 @@ async function editView(id) {
         <p class="hint">只打标记，不写长句。选一个符号，写几个字，回车就记下一条。页码从 1 开始，翻页时点 ＋（也可以直接改数字，或清空不填）。觉得这一条还没解决，就勾上「待解决」，它会出现在下面的「初步解决」里。</p>
         <div class="mark-input">
           <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="标记类型">${M.MARKS.map((m, k) => `<button type="button" role="radio" class="t${k}" data-type="${m.type}" aria-checked="${k === 0}"><b>${m.type}</b>${m.label}</button>`).join("")}</div>
-            <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div></div>
+            <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${imageButton("markText")}</div></div></div>
           <div class="mark-line">
             <div class="page-step"><button type="button" class="step" data-step="-1" aria-label="上一页">−</button><input class="input page" id="markPage" placeholder="页" maxlength="12" inputmode="numeric" aria-label="页码"><button type="button" class="step" data-step="1" aria-label="下一页">＋</button></div>
             <textarea class="input grow" id="markText" rows="1" maxlength="300" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done"></textarea>
@@ -982,7 +1052,6 @@ async function editView(id) {
       <section class="stage"><h2><span class="stage-n">+</span>自由笔记</h2>
         <p class="hint">任何想记的：公式、推导、代码、截图。支持 Markdown，公式用 $…$。</p>
         <textarea class="textarea" name="notes" rows="6"></textarea>${tools("notes", true)}</section>
-      <input type="file" id="imgPick" accept="image/*" hidden>
     </form>
     <div class="sheet" id="preview" hidden></div>
     <div class="editor-bar">
@@ -1203,30 +1272,7 @@ async function editView(id) {
     paintPdf();
   };
 
-  // Images: resized in the browser, published with the card.
-  let imageTarget = "notes";
-  $$("[data-image]").forEach((b) => (b.onclick = () => { imageTarget = b.dataset.image; $("#imgPick").click(); }));
-  $("#imgPick").onchange = async (event) => {
-    const file = event.target.files[0];
-    event.target.value = "";
-    if (!file) return;
-    try {
-      const dataUrl = await shrinkImage(file);
-      const ext = dataUrl.startsWith("data:image/webp") ? "webp" : "jpg";
-      const day = M.todayISO();
-      const path = "uploads/" + day.slice(0, 7) + "/" + day.replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
-      images[path] = dataUrl;
-      const area = form[imageTarget];
-      const pos = area.selectionStart ?? area.value.length;
-      const name = file.name.replace(/\.[^.]+$/, "").replace(/[[\]]/g, "");
-      const snippet = (pos && area.value[pos - 1] !== "\n" ? "\n" : "") + "![" + name + "](" + path + ")\n";
-      area.setRangeText(snippet, pos, pos, "end");
-      changed();
-      toast("图片已插入，发布时一起上传。");
-    } catch (error) {
-      toast(error.message, "error");
-    }
-  };
+  enableImages(form, images);
 
   const collectMarks = () =>
     $$("#marks [data-row]").map((r) => ({ type: $(".mark-sym", r).dataset.type, page: $("[data-k=page]", r).value, text: $("[data-k=text]", r).value, answer: $("[data-k=answer]", r).value, solve: $("[data-k=solve]", r).checked }));
@@ -1325,9 +1371,8 @@ async function editView(id) {
       const today = M.todayISO();
       const finalId = isNew ? M.makeId(draftCard.readDate || today, draftCard.title) : id;
       const c = M.applyStatus({ ...draftCard, id: finalId }, today);
-      // Only upload images still referenced in the text.
-      const text = c.idea + c.notes + c.pain + c.doubts + c.relevance + c.linkNote + c.solved;
-      const uploads = Object.entries(images).filter(([path]) => text.includes(path));
+      // Only upload images still referenced in the card.
+      const uploads = usedImages(images, c);
       // PDFs replaced or removed while editing are deleted from the repository.
       const stalePdfs = [...new Set([existing?.pdf, ...uploadedPdfs])].filter((p) => p && p !== c.pdf);
       await saveCard(c, (isNew ? "新增卡片：" : "更新卡片：") + c.title.slice(0, 60), isNew ? null : (latest) =>
@@ -1615,16 +1660,13 @@ async function boot() {
     toast(error.message, "error");
   }
   // Local previews of just-published images (until the site rebuilds).
-  const cache = store.get("pc-imgcache") || {};
-  if (Object.keys(cache).length) {
-    document.addEventListener("error", (e) => {
-      const img = e.target;
-      if (img.tagName === "IMG" && !img.dataset.fallback) {
-        const key = Object.keys(cache).find((k) => img.src.endsWith(k));
-        if (key) { img.dataset.fallback = "1"; img.src = cache[key]; }
-      }
-    }, true);
-  }
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (img.tagName !== "IMG" || img.dataset.fallback) return;
+    const cache = store.get("pc-imgcache") || {};
+    const key = Object.keys(cache).find((k) => img.src.endsWith(k));
+    if (key) { img.dataset.fallback = "1"; img.src = cache[key]; }
+  }, true);
   addEventListener("hashchange", route);
   if (!location.hash && store.get("pc-mode") === "lab") history.replaceState(null, "", "#/lab");
   if (!location.hash && store.get("pc-mode") === "map") history.replaceState(null, "", "#/map");

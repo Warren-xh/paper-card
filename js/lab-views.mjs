@@ -298,8 +298,7 @@ export function createLab(ctx) {
     if (!log) log = existing ? structuredClone(existing) : L.newLog(M.todayISO());
     const projects = L.projectList(state.logs.logs).map(([p]) => p);
     const allTags = L.tagCounts(state.logs.logs).map(([t]) => t);
-    const tools = (name, image = false) =>
-      `<div class="md-tools"><button type="button" class="fmt" data-fmt="**" data-for="${name}" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="${name}" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${image ? `<button type="button" class="btn quiet small" data-image="${name}">插入图片</button>` : ""}</div>`;
+    const tools = ctx.mdTools;
 
     main.innerHTML = `
       <div class="toolbar">
@@ -335,7 +334,7 @@ export function createLab(ctx) {
           <p class="hint">随手记，每条自动记下时间。选一个符号，写几个字，回车记下一条。卡住的问题勾上「待解决」，做完后在下面写怎么解决的。</p>
           <div class="mark-input">
             <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="记录类型">${L.STEPS.map((s, k) => `<button type="button" role="radio" class="s${k}" data-type="${s.type}" aria-checked="${k === 0}"><b>${s.type}</b>${s.label}</button>`).join("")}</div>
-              <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="stepSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="stepText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="stepText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button></div></div></div>
+              <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="stepSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="stepText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="stepText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${ctx.imageButton("stepText")}</div></div></div>
             <div class="mark-line"><textarea class="input grow" id="stepText" rows="1" maxlength="500" placeholder="做了什么、看到什么，回车记下；命令可用 \`反引号\` 包住" aria-label="过程记录" enterkeyhint="done"></textarea><button type="button" class="btn" id="addStep">记下</button></div>
           </div>
           <ol class="marks-list" id="steps"></ol></section>
@@ -359,7 +358,6 @@ export function createLab(ctx) {
         <section class="stage"><h2><span class="stage-n">+</span>笔记</h2>
           <p class="hint">任何想记的，支持 Markdown、公式 $…$ 和图片。</p>
           <textarea class="textarea" name="notes" rows="5"></textarea>${tools("notes", true)}</section>
-        <input type="file" id="imgPick" accept="image/*" hidden>
       </form>
       <div class="sheet" id="preview" hidden></div>
       <div class="editor-bar">
@@ -488,29 +486,7 @@ export function createLab(ctx) {
       changed();
     });
 
-    // Images: resized in the browser, saved with the log.
-    let imageTarget = "notes";
-    $$("[data-image]").forEach((b) => (b.onclick = () => { imageTarget = b.dataset.image; $("#imgPick").click(); }));
-    $("#imgPick").onchange = async (event) => {
-      const file = event.target.files[0];
-      event.target.value = "";
-      if (!file) return;
-      try {
-        const dataUrl = await ctx.shrinkImage(file);
-        const ext = dataUrl.startsWith("data:image/webp") ? "webp" : "jpg";
-        const today = M.todayISO();
-        const path = "uploads/" + today.slice(0, 7) + "/" + today.replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
-        images[path] = dataUrl;
-        const area = form[imageTarget];
-        const pos = area.selectionStart ?? area.value.length;
-        const name = file.name.replace(/\.[^.]+$/, "").replace(/[[\]]/g, "");
-        area.setRangeText((pos && area.value[pos - 1] !== "\n" ? "\n" : "") + "![" + name + "](" + path + ")\n", pos, pos, "end");
-        changed();
-        toast("图片已插入，保存时一起上传。");
-      } catch (error) {
-        toast(error.message, "error");
-      }
-    };
+    ctx.enableImages(form, images);
 
     // Code files: uploaded to the repository right away so they are never lost.
     let files = [...log.files];
@@ -665,8 +641,7 @@ export function createLab(ctx) {
       try {
         const finalId = isNew ? pendingId || L.newLogId(draftLog.date || M.todayISO(), draftLog.title) : id;
         const l = { ...draftLog, id: finalId };
-        const text = l.fixes + l.results + l.next + l.notes;
-        const uploads = Object.entries(images).filter(([path]) => text.includes(path));
+        const uploads = ctx.usedImages(images, l);
         // Code files removed while editing are deleted from the repository too.
         const kept = new Set(l.files.map((f) => f.path));
         const stale = [...new Set([...(existing?.files || []).map((f) => f.path), ...uploadedPaths])].filter((p) => !kept.has(p));
