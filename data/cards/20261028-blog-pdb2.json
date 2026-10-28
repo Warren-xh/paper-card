@@ -23,6 +23,13 @@
       "text": "AI 成果越来越多地由多个相互作用的组件构成的系统，而不是单独模型",
       "answer": "",
       "solve": false
+    },
+    {
+      "type": "?",
+      "page": "1",
+      "text": "![截图](uploads/2026-10/20261028-ovx89j.webp)",
+      "answer": "",
+      "solve": false
     }
   ],
   "solved": "",
@@ -42,5 +49,5 @@
   "srs": null,
   "reviews": [],
   "createdAt": "2026-10-28T16:53:54.401Z",
-  "updatedAt": "2026-10-28T16:53:54.401Z"
+  "updatedAt": "2026-10-28T16:54:16.936Z"
 }
