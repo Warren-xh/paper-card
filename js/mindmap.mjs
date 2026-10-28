@@ -14,7 +14,7 @@ export const COLORS = Object.freeze(["", "blue", "green", "orange", "red", "purp
 export const AUTO_COLORS = Object.freeze(["blue", "orange", "green", "purple", "red", "teal"]);
 export const COLOR_LABELS = { "": "自动", blue: "蓝", green: "绿", orange: "橙", red: "红", purple: "紫", teal: "青", gray: "灰" };
 
-const str = (value, max = 500) => (typeof value === "string" ? value.slice(0, max) : "");
+const str = (value, max = Infinity) => (typeof value === "string" ? value.slice(0, max) : "");
 const NODE_ID = /^[a-z0-9]{1,16}$/;
 
 export function newNodeId(random = Math.random) {
@@ -43,11 +43,11 @@ function normalizeNode(raw, seen, depth) {
   const ref = kind !== "text" && validId(raw.ref) ? raw.ref : "";
   const node = {
     id,
-    text: str(raw.text, 300).trim(),
+    text: str(raw.text).trim(),
     kind: ref ? kind : "text",
     ref,
     color: COLORS.includes(raw.color) ? raw.color : "",
-    note: str(raw.note, 2000).trim(),
+    note: str(raw.note).trim(),
     children: [],
   };
   if (depth < MAX_DEPTH && Array.isArray(raw.children))
@@ -66,7 +66,7 @@ export function normalizeMap(raw) {
   return {
     version: 1,
     id: raw.id,
-    title: str(raw.title, 120).trim(),
+    title: str(raw.title).trim(),
     root,
     createdAt: str(raw.createdAt, 40),
     updatedAt: str(raw.updatedAt, 40),
@@ -214,7 +214,7 @@ export function summarize(map) {
     logs: refs.log.size,
     courses: refs.course.size,
     branches: map.root.children.map((c) => c.text).filter(Boolean).slice(0, 6),
-    text: (() => { const t = []; walk(map.root, (n) => t.push(n.text, n.note)); return t.filter(Boolean).join(" ").replace(/\s+/g, " ").slice(0, 3000); })(),
+    text: (() => { const t = []; walk(map.root, (n) => t.push(n.text, n.note)); return t.filter(Boolean).join(" ").replace(/\s+/g, " ").slice(0, 20000); })(),
     updatedAt: map.updatedAt,
   };
 }

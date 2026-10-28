@@ -128,7 +128,7 @@ export function createMaps(ctx) {
   async function createMap() {
     const title = await dialog(
       `<form method="dialog" id="mapForm"><h2>新建导图</h2><p>导图的名字也是中心主题，之后可以改。</p>
-        <label class="field"><span>名字</span><input name="t" maxlength="120" required autofocus placeholder="导图的主题"></label>
+        <label class="field"><span>名字</span><input name="t" required autofocus placeholder="导图的主题"></label>
         <div class="dialog-actions"><button type="button" class="btn" data-c>取消</button><button class="btn primary">创建</button></div></form>`,
       (el, close) => {
         $("[data-c]", el).onclick = () => close(null);
@@ -499,12 +499,12 @@ export function createMaps(ctx) {
       panel.innerHTML = `
         <section class="panel-sec"><h3>${isRoot ? "中心主题" : "当前分支"}</h3>
           ${n.kind === "text"
-            ? `<label class="field"><span>文字</span><input class="input" id="nText" maxlength="300" placeholder="分支的文字" value="${h(n.text)}"></label>`
+            ? `<label class="field"><span>文字</span><input class="input" id="nText" placeholder="分支的文字" value="${h(n.text)}"></label>`
             : `<div class="nlink k-${n.kind}"><span class="mkind">${MM.KINDS[n.kind]}</span><b>${h(link?.title || n.text || "（已删除）")}</b>
                 ${link ? `<a class="small" href="${h(link.href)}">打开</a>` : `<span class="muted small">原${{ card: "卡片", log: "记录", course: "课程" }[n.kind]}已删除</span>`}
                 <button type="button" class="btn quiet small" id="unlinkNode">改成文字</button></div>`}
           ${isRoot ? "" : `<div class="field"><span class="label">颜色</span><div class="swatches">${MM.COLORS.map((c) => `<button type="button" class="swatch c-${c || "auto"}" data-color="${c}" aria-pressed="${n.color === c}" title="${MM.COLOR_LABELS[c]}"></button>`).join("")}</div></div>`}
-          <label class="field"><span>备注（浏览时悬停可见）</span><textarea class="textarea short" id="nNote" rows="2" maxlength="2000" placeholder="可以留空">${h(n.note)}</textarea></label>
+          <label class="field"><span>备注（浏览时悬停可见）</span><textarea class="textarea short" id="nNote" rows="2" placeholder="可以留空">${h(n.note)}</textarea></label>
           <div class="btn-row panel-btns">
             <button type="button" class="btn small" data-act="child">＋ 子分支</button>
             ${isRoot ? "" : `<button type="button" class="btn small" data-act="sibling">＋ 同级</button>
@@ -515,7 +515,7 @@ export function createMaps(ctx) {
         <section class="panel-sec"><h3>给「${h(targetName)}」加分支</h3>
           <div class="seg add-kind" role="group" aria-label="分支类型">${Object.entries(MM.KINDS).map(([k, label]) => `<button type="button" data-kind="${k}" aria-pressed="${addKind === k}">${label}</button>`).join("")}</div>
           ${addKind === "text"
-            ? `<input class="input" id="addText" maxlength="300" placeholder="输入文字，回车添加" style="margin-top:8px">`
+            ? `<input class="input" id="addText" placeholder="输入文字，回车添加" style="margin-top:8px">`
             : `<input class="input" id="pickQuery" placeholder="搜索${{ card: "论文标题、作者", log: "记录标题", course: "课程名称" }[addKind]}…" style="margin-top:8px">
                <label class="check-row small" style="margin-top:6px"><input type="checkbox" id="onlyDone"${onlyFinished ? " checked" : ""}> 只显示${{ card: "读完的论文", log: "完成的记录", course: "学完的课程" }[addKind]}</label>
                <div class="pick-list" id="pickList"></div>`}

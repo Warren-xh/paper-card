@@ -1,13 +1,13 @@
 // Search across every module (the Ctrl+K search box): papers, practice logs,
 // courses and their lessons, and mind maps.
 
-export const KIND_LABELS = { card: "论文", log: "实操", course: "课程", lesson: "课时", map: "导图" };
+export const KIND_LABELS = { card: "论文", log: "实操", course: "课程", lesson: "课时", map: "导图", term: "术语" };
 
 const lower = (s) => String(s || "").toLowerCase();
 
 // One entry per thing that can be opened. `courseFiles` (full courses, when
 // loaded) adds their lessons; otherwise only courses themselves are found.
-export function buildEntries({ cards = [], logs = [], courses = [], courseFiles = [], maps = [] } = {}) {
+export function buildEntries({ cards = [], logs = [], courses = [], courseFiles = [], maps = [], terms = [] } = {}) {
   const out = [];
   for (const x of cards) out.push({ kind: "card", title: x.title || x.oneLine || "未写标题", sub: x.oneLine && x.title ? x.oneLine : [x.authors, x.year].filter(Boolean).join(" · "), text: x.text || "", href: "#/c/" + x.id, at: x.updatedAt || "" });
   for (const x of logs) out.push({ kind: "log", title: x.title || "未写标题", sub: x.conclusion || x.date || "", text: x.text || "", href: "#/lab/e/" + x.id, at: x.updatedAt || "" });
@@ -22,6 +22,7 @@ export function buildEntries({ cards = [], logs = [], courses = [], courseFiles 
       at: c.updatedAt || "",
     }));
   for (const x of maps) out.push({ kind: "map", title: x.title || "未命名导图", sub: (x.branches || []).join(" · "), text: x.text || "", href: "#/map/" + x.id, at: x.updatedAt || "" });
+  for (const x of terms) out.push({ kind: "term", title: x.term, sub: [x.zh, x.en].filter(Boolean).join(" · "), text: x.def || "", href: "#/terms/" + encodeURIComponent(x.term), at: x.updatedAt || "" });
   return out;
 }
 

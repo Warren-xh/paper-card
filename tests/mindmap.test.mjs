@@ -23,7 +23,7 @@ test("normalizeMap cleans trees and keeps valid links", () => {
   assert.notEqual(a.children[0].id, "a1");                 // repeated id replaced
   assert.deepEqual([b.kind, b.ref], ["text", ""]);         // broken link becomes plain text
   assert.match(b.id, /^[a-z0-9]{8}$/);
-  assert.equal(c.text.length, 300);
+  assert.equal(c.text.length, 400);                         // no length limit
   assert.equal(c.note, "备注");
   assert.equal(MM.countNodes(m.root), 5);
   assert.throws(() => MM.normalizeMap({ id: "nope" }));

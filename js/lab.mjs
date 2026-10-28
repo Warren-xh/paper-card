@@ -27,7 +27,7 @@ export const PARTS = Object.freeze([
   { key: "next", title: "下次要做" },
 ]);
 
-const str = (value, max = 20000) => (typeof value === "string" ? value.slice(0, max) : "");
+const str = (value, max = Infinity) => (typeof value === "string" ? value.slice(0, max) : "");
 
 /* ---------- uploaded code files: code/<log id>/<relative path> ---------- */
 export const CODE_DIR = "code/";
@@ -129,27 +129,27 @@ export function normalizeLog(raw) {
   if (!raw || typeof raw !== "object") throw new Error("记录格式不正确。");
   if (!validId(raw.id)) throw new Error("记录编号不正确。");
   const l = emptyLog(raw.id);
-  l.title = str(raw.title, 200).trim();
+  l.title = str(raw.title).trim();
   l.date = validDate(raw.date) ? raw.date : "";
   l.status = raw.status === "done" ? "done" : "doing";
   const hours = typeof raw.hours === "number" ? raw.hours : parseFloat(raw.hours);
   l.hours = Number.isFinite(hours) && hours >= 0 && hours <= 200 ? Math.round(hours * 10) / 10 : null;
-  l.project = str(raw.project, 60).trim();
+  l.project = str(raw.project).trim();
   l.tags = normalizeTags(raw.tags);
-  l.env = str(raw.env, 200).trim();
-  l.link = safeUrl(str(raw.link, 500).trim());
-  l.goal = str(raw.goal, 300).trim();
+  l.env = str(raw.env).trim();
+  l.link = safeUrl(str(raw.link).trim());
+  l.goal = str(raw.goal).trim();
   l.steps = (Array.isArray(raw.steps) ? raw.steps : [])
     .map((s) => ({
       type: STEP_TYPES.has(s?.type) ? s.type : "✎",
       time: TIME_RE.test(s?.time) ? s.time : "",
-      text: str(s?.text, 500).trim(),
+      text: str(s?.text).trim(),
       solve: !!s?.solve,
-      answer: str(s?.answer, 2000).trim(),
+      answer: str(s?.answer).trim(),
     }))
     .filter((s) => s.text)
-    .slice(0, 300);
-  l.conclusion = str(raw.conclusion, 400).trim();
+    .slice(0, 5000);
+  l.conclusion = str(raw.conclusion).trim();
   for (const k of ["fixes", "code", "results", "next"]) l[k] = str(raw[k], 50000);
   l.papers = [...new Set((Array.isArray(raw.papers) ? raw.papers : []).filter(validId))].slice(0, 30);
   const seen = new Set();
@@ -157,7 +157,7 @@ export function normalizeLog(raw) {
     .filter((f) => f && validFilePath(f.path) && !seen.has(f.path) && seen.add(f.path))
     .map((f) => ({ path: f.path, size: Number.isFinite(f.size) && f.size >= 0 ? Math.round(f.size) : null }))
     .slice(0, 500);
-  l.notes = str(raw.notes, 50000);
+  l.notes = str(raw.notes);
   l.createdAt = str(raw.createdAt, 40);
   l.updatedAt = str(raw.updatedAt, 40);
   return l;
@@ -193,7 +193,7 @@ export function summarize(l) {
     open: openSteps(l).length,
     papers: l.papers,
     files: l.files.length,
-    text: plainText(l).slice(0, 4000),
+    text: plainText(l).slice(0, 20000),
     updatedAt: l.updatedAt,
   };
 }

@@ -3,6 +3,15 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.3 — 2026-10-28
+
+- 新的**词库**（顶栏「词库」）：在任何笔记框里选中一个词，点加粗、斜体旁边的「**术语**」，写下中文、英文和解释，就会收进词库；笔记里这个词带虚线下划线，指上去或点一下就弹出中英文和解释。词库页可以搜索、排序、编辑、删除，并列出每个术语出现在哪些论文、实操、课时里；全站搜索也能搜到术语。
+  New **term library** (**Terms** in the top bar): select a word in any notes box and click **Term** next to bold and italic, add the Chinese and English names and an explanation, and it goes into the library. The word in your notes gets a dotted underline and shows its card when you point at or tap it. The library page searches, sorts, edits and deletes terms and lists where each one appears; Ctrl+K search finds terms too.
+- 课程的每一课只有**一个笔记框**：「⏱ 时间点」插入视频时间，「☐ 待解决」插入问题；课时页上点时间视频就跳过去，问题可以直接勾选成已解决。原来单独的「边看边记」在打开编辑时自动合并进笔记，内容不会丢。
+  Each lesson now has **one notes box**: **⏱ Time** inserts a video time and **☐ Open** a question; on the lesson page, times jump the video and questions can be ticked off. Earlier separate time marks are merged into the notes when you open the editor, so nothing is lost.
+- 去掉所有输入框的字数上限，标题、标记、笔记想写多长都可以。
+  No more length limits on any text box.
+
 ## v4.2 — 2026-10-28
 
 - 新的「今天」总览页（顶栏 🏠，也是网站名的链接）：今天该回顾的卡片、继续上哪一课、进行中的实操、各模块待解决的问题；近半年的**学习日历**（按每天在网站上保存的次数）和连续学习天数；快速开始和最近更新。

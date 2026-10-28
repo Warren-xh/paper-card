@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.2** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.3** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -36,6 +36,12 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 - A **study calendar**: how many times you saved on the site each day over the last six months, like GitHub's contribution graph, with your current streak.
 - Quick starts and recent changes.
 
+**Terms — a term library** (**Terms** in the top bar)
+
+- Select a word in any notes box and click **Term** next to bold and italic; add the Chinese and English names and an explanation, and it goes into the library.
+- Marked words get a dotted underline; point at them (or tap on a phone) to see the names and explanation.
+- The library page searches, sorts, edits and deletes terms, and lists the papers, logs and lessons each term appears in.
+
 **Search everything**: press **Ctrl+K** (⌘K on a Mac) or the magnifier in the top bar to search papers, logs, courses, **every lesson's notes** and mind maps from one box; arrow keys to pick, Enter to open. With nothing typed it shows quick actions and recent changes.
 
 **Papers — paper cards**
@@ -61,7 +67,7 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 - The course page lists “Lesson 1, Lesson 2, …”; open any lesson for:
   - **Notes**: key points, formulas, code and screenshots (paste screenshots with Ctrl+V).
   - **Slides & materials**: upload slide PDFs, PPTs, handouts, images and more (or drag them in); open or download them from the lesson page, with images shown as thumbnails.
-  - **Notes while watching** (optional): marks with the **video time** (`?` unclear, `!` key point, `★` useful, `✎` note); tick **Open** on anything unclear and answer it afterwards; plus a one-line summary.
+  - Everything you jot while watching goes in that one box: **⏱ Time** inserts a video time (click it on the lesson page and the video jumps there), **☐ Open** adds a question you can tick off on the lesson page once solved; then a one-line summary of the lesson.
 - The course page shows a progress bar and the lesson list — click a circle to mark a lesson watched; **Continue** jumps to the next unwatched lesson. Write your takeaways when you finish.
 
 **Maps — mind maps**
@@ -164,7 +170,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.2"
+git commit -m "Paper Cards v4.3"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -236,6 +242,7 @@ Every save is a Git commit, so GitHub keeps the full history. You can also downl
 | `papers/` | Uploaded paper PDFs |
 | `code/<log id>/` | Code uploaded to practice logs |
 | `materials/<course id>/<lesson id>/` | Slides and materials uploaded to each lesson of a course |
+| `data/terms.json` | The term library |
 | `uploads/` | Inserted images |
 
 ## What's in this repository
@@ -274,6 +281,7 @@ Main files:
 | `js/mindmap.mjs`, `js/map-views.mjs` | Mind-map data, automatic layout and pages |
 | `js/overview.mjs`, `js/overview-views.mjs` | The Today overview and study calendar |
 | `js/search.mjs`, `js/palette.mjs` | Search everything (Ctrl+K) |
+| `js/terms.mjs`, `js/terms-views.mjs` | Term library: marking terms, pop-up explanations, the library page |
 | `js/enhance.mjs` | Image viewer, code colours, Ctrl+S, back to top, PDF preview |
 | `js/i18n.mjs` | Interface language (Chinese / English) |
 | `js/github.mjs` | One commit per save through the Git Data API, retried on conflicts |

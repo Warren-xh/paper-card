@@ -46,7 +46,7 @@ export const GRADES = Object.freeze({
   good: { label: "想起来了", days: (level) => INTERVALS[Math.min(level + 1, INTERVALS.length - 1)] },
 });
 
-const str = (value, max = 20000) =>
+const str = (value, max = Infinity) =>
   typeof value === "string" ? value.slice(0, max) : "";
 const int = (value, min, max) => {
   const n = typeof value === "number" ? value : parseInt(value, 10);
@@ -132,13 +132,13 @@ export function normalizeTags(value) {
   const seen = new Set();
   const out = [];
   for (const raw of list) {
-    const tag = String(raw).replace(/^#/, "").trim().slice(0, 30);
+    const tag = String(raw).replace(/^#/, "").trim().slice(0, 100);
     if (tag && !seen.has(tag.toLowerCase())) {
       seen.add(tag.toLowerCase());
       out.push(tag);
     }
   }
-  return out.slice(0, 12);
+  return out.slice(0, 50);
 }
 
 export function safeUrl(url) {
@@ -173,33 +173,33 @@ export function normalizeCard(raw) {
   if (!raw || typeof raw !== "object") throw new Error("卡片格式不正确。");
   if (!validId(raw.id)) throw new Error("卡片编号不正确。");
   const c = emptyCard(raw.id);
-  c.title = str(raw.title, 300).trim();
-  c.authors = str(raw.authors, 300).trim();
+  c.title = str(raw.title).trim();
+  c.authors = str(raw.authors).trim();
   c.year = int(raw.year, 1800, 2200);
-  c.venue = str(raw.venue, 120).trim();
-  c.link = safeUrl(str(raw.link, 500).trim());
+  c.venue = str(raw.venue).trim();
+  c.link = safeUrl(str(raw.link).trim());
   c.pdf = PDF_RE.test(raw.pdf) ? raw.pdf : "";
-  c.pdfName = c.pdf ? str(raw.pdfName, 200).trim() : "";
+  c.pdfName = c.pdf ? str(raw.pdfName).trim() : "";
   c.tags = normalizeTags(raw.tags);
-  c.project = str(raw.project, 60).trim();
+  c.project = str(raw.project).trim();
   c.readDate = validDate(raw.readDate) ? raw.readDate : "";
   c.status = raw.status === "done" ? "done" : "reading";
   c.doneAt = validDate(raw.doneAt) ? raw.doneAt : "";
-  c.why = str(raw.why, 300).trim();
+  c.why = str(raw.why).trim();
   c.marks = (Array.isArray(raw.marks) ? raw.marks : [])
     .map((m) => ({
       type: MARK_TYPES.has(m?.type) ? m.type : "!",
       page: str(String(m?.page ?? ""), 12).trim(),
-      text: str(m?.text, 300).trim(),
-      answer: str(m?.answer, 2000).trim(),
+      text: str(m?.text).trim(),
+      answer: str(m?.answer).trim(),
       // "待解决": the mark gets an answer box in the first-pass solving stage.
       // Older marks that already have an answer count as flagged.
-      solve: typeof m?.solve === "boolean" ? m.solve : !!str(m?.answer, 2000).trim(),
+      solve: typeof m?.solve === "boolean" ? m.solve : !!str(m?.answer).trim(),
     }))
     .filter((m) => m.text)
-    .slice(0, 200);
+    .slice(0, 5000);
   c.solved = str(raw.solved);
-  c.oneLine = str(raw.oneLine, 400).trim();
+  c.oneLine = str(raw.oneLine).trim();
   c.pain = str(raw.pain);
   c.idea = str(raw.idea);
   const proof = raw.proof && typeof raw.proof === "object" ? raw.proof : {};
@@ -211,8 +211,8 @@ export function normalizeCard(raw) {
   c.doubts = str(raw.doubts);
   c.relevance = str(raw.relevance);
   c.links = [...new Set((Array.isArray(raw.links) ? raw.links : []).filter((id) => validId(id) && id !== c.id))].slice(0, 50);
-  c.linkNote = str(raw.linkNote, 4000);
-  c.notes = str(raw.notes, 50000);
+  c.linkNote = str(raw.linkNote);
+  c.notes = str(raw.notes);
   c.srs = normalizeSrs(raw.srs);
   c.reviews = (Array.isArray(raw.reviews) ? raw.reviews : [])
     .filter((r) => r && validDate(r.date) && GRADES[r.grade])
@@ -300,6 +300,7 @@ export const stripMd = (text) =>
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[\[([^[\]|\n]+?)(?:\|[^[\]\n]+?)?\]\]/g, "$1")
     .replace(/[#>*_`~|$-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -339,7 +340,7 @@ export function summarize(c) {
     due: c.status === "done" ? c.srs?.due || "" : "",
     level: c.srs?.level ?? 0,
     reviews: c.reviews.length,
-    text: plainText(c).slice(0, 4000),
+    text: plainText(c).slice(0, 20000),
     updatedAt: c.updatedAt,
   };
 }

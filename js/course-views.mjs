@@ -187,7 +187,7 @@ export function createCourses(ctx) {
             <button type="button" class="lesson-check" data-done="${h(l.id)}" aria-pressed="${l.done}" title="${l.done ? "标成没看完" : "标成看完了"}">${l.done ? "✓" : i + 1}</button>
             <div class="lesson-main"><a class="lesson-title" href="#/course/${h(id)}/l/${h(l.id)}"><span class="lesson-n">第 ${i + 1} 课</span>${l.title ? h(l.title) : ""}</a>
               ${l.oneLine ? `<p>${h(l.oneLine)}</p>` : ""}
-              <div class="facts">${l.date ? `<span>${l.date}</span>` : ""}${l.notes.trim() ? `<span>有笔记</span>` : ""}${l.files.length ? `<span>${l.files.length} 个资料</span>` : ""}${l.marks.length ? `<span>${l.marks.length} 个标记</span>` : ""}${C.openMarks(l).length ? `<span class="todo-tag">待解决 ${C.openMarks(l).length}</span>` : ""}</div></div>
+              <div class="facts">${l.date ? `<span>${l.date}</span>` : ""}${l.notes.trim() ? `<span>有笔记</span>` : ""}${l.files.length ? `<span>${l.files.length} 个资料</span>` : ""}${l.marks.length ? `<span>${l.marks.length} 个标记</span>` : ""}${C.openCount(l) ? `<span class="todo-tag">待解决 ${C.openCount(l)}</span>` : ""}</div></div>
             <a class="btn quiet small" href="#/course/${h(id)}/l/${h(l.id)}/edit">记笔记</a>
           </li>`).join("")}</ol>` : `<p class="muted">还没有课时。点「＋ 新的一课」开始记第 1 课；也可以在「编辑课程」里一次列出全部课时的标题。</p>`}
         </section>
@@ -237,8 +237,8 @@ export function createCourses(ctx) {
         ${l.oneLine ? `<section class="one-line"><h2 class="sec-label">这一课讲了什么</h2><div class="sec-body"><p>${h(l.oneLine)}</p></div></section>` : ""}
         ${video ? `<section class="section video-sec"><div class="sec-head"><h2>视频</h2><a class="small" href="${h(C.videoWatchUrl(video))}" target="_blank" rel="noopener">在${video.site === "youtube" ? " YouTube " : " B 站"}打开</a></div>
           <div class="video-box" id="videoBox"><button type="button" class="video-start" data-seek="0"><span>▶</span>在页面里播放</button></div>
-          ${l.marks.some((m) => m.time) ? `<p class="hint small">点「边看边记」里的时间，视频会跳到那一刻。</p>` : ""}</section>` : ""}
-        ${l.notes.trim() ? `<section class="section"><h2>笔记</h2><div class="md">${md()(l.notes)}</div></section>` : ""}
+          ${l.marks.some((m) => m.time) || /\[(\d{1,2}:)?\d{1,3}:[0-5]\d\]/.test(l.notes) ? `<p class="hint small">点笔记里的时间，视频会跳到那一刻。</p>` : ""}</section>` : ""}
+        ${l.notes.trim() ? `<section class="section"><h2>笔记</h2><div class="md lesson-notes">${renderMarkdown(l.notes, { shiftHeadings: 2, tasks: { n: 0 }, timeTag: (t) => (video ? at({ time: t }) : `<span class="time-tag">${h(t)}</span>`) })}</div></section>` : ""}
         ${materialsHtml(l)}
         ${l.marks.length ? `<section class="section"><h2>边看边记</h2><ol class="step-view">${C.marksByTime(l.marks).map((m) => `<li>${at(m)}${sym(m.type)}<span>${renderInline(m.text)}${m.solve ? (m.answer ? ` <span class="solved-tick" title="已解决">✓</span>` : ` <span class="todo-tag">待解决</span>`) : ""}</span></li>`).join("")}</ol></section>` : ""}
         ${flagged.length ? `<section class="section"><h2>问题与解答</h2><ul class="solve-view">${flagged.map((m) => `<li><div class="q">${sym(m.type)}${m.time ? at(m).replace('class="time', 'class="page') : ""}<span>${renderInline(m.text)}</span></div><div class="a">${m.answer ? renderInline(m.answer) : '<span class="muted">还没解决</span>'}</div></li>`).join("")}</ul></section>` : ""}
@@ -248,6 +248,25 @@ export function createCourses(ctx) {
           ${next ? `<a href="#/course/${h(id)}/l/${h(next.id)}">${h(lessonName(next, i + 1))} →</a>` : "<span></span>"}
         </nav>
       </article>`;
+    // Ticking a question in the notes saves it straight away.
+    $("article", main).addEventListener("change", async (e) => {
+      const box = e.target.closest("input[data-task]");
+      if (!box) return;
+      if (!(await ctx.ensureUnlocked())) { box.checked = !box.checked; return; }
+      box.disabled = true;
+      try {
+        await saveCourse(c, "课程笔记：" + (c.title + " · " + lessonName(l, i)).slice(0, 70), (latest) => {
+          const x = latest.lessons.find((y) => y.id === lid);
+          return x ? C.upsertLesson(latest, { ...x, notes: C.toggleTask(x.notes, +box.dataset.task) }) : latest;
+        });
+        toast(box.checked ? "已标成解决。" : "已标成待解决。");
+      } catch (error) {
+        box.checked = !box.checked;
+        toast("保存失败：" + error.message, "error");
+      } finally {
+        box.disabled = false;
+      }
+    });
     // The player loads only when asked; a time jumps the video there.
     if (video) $("article", main).addEventListener("click", (e) => {
       const b = e.target.closest("[data-seek]");
@@ -284,12 +303,12 @@ export function createCourses(ctx) {
       ${restored ? `<div class="banner warn"><span>已恢复这台设备上还没保存的草稿。</span><button class="btn quiet" id="discardDraft">放弃草稿</button></div>` : ""}
       ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，保存时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
       <form class="sheet" id="editor" autocomplete="off">
-        <label class="field"><span class="visually-hidden">课程名称</span><input class="title-input" name="title" maxlength="200" placeholder="课程名称"></label>
+        <label class="field"><span class="visually-hidden">课程名称</span><input class="title-input" name="title" placeholder="课程名称"></label>
         <div class="meta-grid">
-          <label class="field"><span>讲师 / 平台</span><input name="teacher" maxlength="120" placeholder="讲师、学校或平台"></label>
-          <label class="field"><span>课程链接</span><input name="link" maxlength="500" placeholder="课程主页或播放列表的网址"></label>
+          <label class="field"><span>讲师 / 平台</span><input name="teacher" placeholder="讲师、学校或平台"></label>
+          <label class="field"><span>课程链接</span><input name="link" placeholder="课程主页或播放列表的网址"></label>
           <label class="field"><span>标签</span><input name="tags" list="ctagList" placeholder="用逗号分开"></label>
-          <label class="field"><span>项目</span><input name="project" list="cprojList" maxlength="60" placeholder="可以留空"></label>
+          <label class="field"><span>项目</span><input name="project" list="cprojList" placeholder="可以留空"></label>
           <label class="field"><span>开始日期</span><input name="startDate" type="date"></label>
           <div class="field"><span class="label" id="cstatusLabel">状态</span><div class="seg" role="group" aria-labelledby="cstatusLabel">
             ${Object.entries(C.STATUS_LABELS).map(([k, t]) => `<button type="button" data-status="${k}">${t}</button>`).join("")}</div></div>
@@ -297,7 +316,7 @@ export function createCourses(ctx) {
         <datalist id="cprojList">${projects.map((p) => `<option value="${h(p)}">`).join("")}</datalist>
         <datalist id="ctagList">${allTags.map((t) => `<option value="${h(t)}">`).join("")}</datalist>
         <section class="stage"><h2><span class="stage-n">1</span>为什么学</h2>
-          <label class="field"><span>目标（一行）</span><input name="goal" maxlength="300" placeholder="学这门课想得到什么"></label></section>
+          <label class="field"><span>目标（一行）</span><input name="goal" placeholder="学这门课想得到什么"></label></section>
         <section class="stage"><h2><span class="stage-n">2</span>课时</h2>
           <p class="hint">这里只列每一课的标题，比如「Agent 概览」。笔记、截图和课件保存后在课程页点进每一课里写和上传。</p>
           <ol class="lesson-edit" id="lessonRows"></ol>
@@ -324,7 +343,7 @@ export function createCourses(ctx) {
     let lessons = course.lessons.map((l) => ({ id: l.id, title: l.title, hasNotes: !!(l.oneLine || l.marks.length || l.notes.trim() || l.files.length) }));
     const paintRows = () => {
       $("#lessonRows").innerHTML = lessons.map((l, i) => `<li data-lid="${h(l.id)}"><span class="lnum">${i + 1}</span>
-        <input class="input" data-k="ltitle" value="${h(l.title)}" maxlength="200" placeholder="这一课的标题" aria-label="课时标题">
+        <input class="input" data-k="ltitle" value="${h(l.title)}" placeholder="这一课的标题" aria-label="课时标题">
         <button type="button" class="btn quiet small" data-move="-1" aria-label="上移">↑</button><button type="button" class="btn quiet small" data-move="1" aria-label="下移">↓</button>
         <button type="button" class="unlink" data-drop="${h(l.id)}" aria-label="删除这一课">×</button></li>`).join("");
     };
@@ -487,6 +506,9 @@ export function createCourses(ctx) {
     }
     if (!lesson) lesson = existing ? structuredClone(existing) : C.emptyLesson({ date: M.todayISO() });
     if (!isNew) lesson.id = lid;
+    // Lessons from before v4.3 had their time marks apart: they move into the notes.
+    const merged = lesson.marks.length > 0;
+    lesson = C.marksToNotes(lesson);
 
     main.innerHTML = `
       <div class="toolbar">
@@ -495,37 +517,27 @@ export function createCourses(ctx) {
       </div>
       ${restored ? `<div class="banner warn"><span>已恢复这台设备上还没保存的草稿。</span><button class="btn quiet" id="discardDraft">放弃草稿</button></div>` : ""}
       ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，保存时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
+      ${merged ? `<div class="banner"><span>原来的「边看边记」已经合并到笔记的最后，保存后生效。</span></div>` : ""}
       <form class="sheet" id="editor" autocomplete="off">
-        <label class="field"><span class="visually-hidden">这一课的标题</span><input class="title-input" name="title" maxlength="200" placeholder="这一课的标题"></label>
+        <label class="field"><span class="visually-hidden">这一课的标题</span><input class="title-input" name="title" placeholder="这一课的标题"></label>
         <div class="meta-grid">
-          <label class="field"><span>视频链接</span><input name="link" maxlength="500" placeholder="这一课视频的网址"></label>
+          <label class="field"><span>视频链接</span><input name="link" placeholder="这一课视频的网址"></label>
           <label class="field"><span>学习日期</span><input name="date" type="date"></label>
           <div class="field"><span class="label" id="ldoneLabel">进度</span><div class="seg" role="group" aria-labelledby="ldoneLabel">
             <button type="button" data-done="0">没看完</button><button type="button" data-done="1">看完了</button></div></div>
         </div>
         <section class="stage"><h2><span class="stage-n">1</span>笔记</h2>
-          <p class="hint">这一课的要点、公式、推导、代码都写在这里。支持 Markdown，公式用 $…$。截图可以直接 Ctrl+V 粘贴，或点「插入图片」。</p>
-          <textarea class="textarea" name="notes" rows="12" placeholder="这一课的笔记"></textarea>${tools("notes")}</section>
+          <p class="hint">边看边写，所有内容都在这一个框里。点「⏱ 时间点」记下视频时间，课时页上点它视频就跳过去；没听懂的点「☐ 待解决」，弄懂后在课时页勾上，或改成 [x] 并在后面写答案。支持 Markdown、公式 $…$，截图可以 Ctrl+V 粘贴，选中文字点「术语」可以加入词库。</p>
+          <div class="note-tools"><input class="input page time-input" id="noteTime" placeholder="分:秒" maxlength="9" inputmode="numeric" aria-label="视频时间"><button type="button" class="btn small" id="addTime" title="在光标处插入时间点">⏱ 时间点</button><button type="button" class="btn small" id="addTask" title="插入一条待解决的问题">☐ 待解决</button></div>
+          <textarea class="textarea notes-big" name="notes" rows="16" placeholder="这一课的笔记"></textarea>${tools("notes")}</section>
         <section class="stage" id="materials"><h2><span class="stage-n">2</span>课件与资料</h2>
           <p class="hint">课件 PDF、PPT、讲义、图片、代码等。选好后马上存进 GitHub 仓库的 materials/ 文件夹，在这一课的页面可以打开和下载；也可以把文件直接拖到这里。同名文件再传会覆盖。仓库是公开的，别传私密文件。单个文件最大 25 MB。</p>
           <div class="btn-row"><button type="button" class="btn" id="pickFiles">上传文件</button><span class="muted small" id="uploadState"></span></div>
           <ul class="file-edit" id="fileList"></ul>
           <input type="file" id="filePick" multiple hidden></section>
-        <section class="stage"><h2><span class="stage-n">3</span>边看边记（可选）</h2>
-          <p class="hint">写下视频时间（分:秒），选一个符号，写几个字，回车记下一条。时间会保留，接着改就行。没听懂的勾上「待解决」，看完后在下面写答案。</p>
-          <div class="mark-input">
-            <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="标记类型">${C.MARKS.map((m, k) => `<button type="button" role="radio" class="t${k}" data-type="${m.type}" aria-checked="${k === 0}"><b>${m.type}</b>${m.label}</button>`).join("")}</div>
-              <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${ctx.imageButton("markText")}</div></div></div>
-            <div class="mark-line"><input class="input page time-input" id="markTime" placeholder="分:秒" maxlength="9" inputmode="numeric" aria-label="视频时间">
-              <textarea class="input grow" id="markText" rows="1" maxlength="500" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done"></textarea>
-              <button type="button" class="btn" id="addMark">记下</button></div>
-          </div>
-          <ol class="marks-list" id="marks"></ol></section>
-        <section class="stage"><h2><span class="stage-n">4</span>看完后</h2>
+        <section class="stage"><h2><span class="stage-n">3</span>看完后</h2>
           <div class="esec"><h3>这一课讲了什么</h3><p class="hint">一句话说出这一课的核心。</p>
-            <textarea class="textarea one" name="oneLine" rows="2" maxlength="400" placeholder="一句话总结这一课"></textarea></div>
-          <div class="esec"><h3>问题与解答</h3><p class="hint">勾了「待解决」的标记列在这里，写下答案；没弄懂的留空。</p>
-            <p class="small" id="fixCount"></p><ol class="solve-list" id="fixList"></ol></div>
+            <textarea class="textarea one" name="oneLine" rows="2" placeholder="一句话总结这一课"></textarea></div>
         </section>
       </form>
       <div class="editor-bar">
@@ -540,69 +552,31 @@ export function createCourses(ctx) {
     paintDone();
     $$("[data-done]").forEach((b) => (b.onclick = () => { done = b.dataset.done === "1"; paintDone(); changed(); }));
 
-    // Marks with video time
-    let markType = C.MARKS[0].type;
-    const typeIndex = (t) => C.MARKS.findIndex((m) => m.type === t);
-    const markRow = (m) =>
-      `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${C.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page time-input" data-k="time" value="${h(m.time)}" placeholder="时间" maxlength="9" aria-label="视频时间"><textarea class="input grow" data-k="text" rows="1" maxlength="500" aria-label="标记内容">${h(m.text)}</textarea><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「问题与解答」里"><input type="checkbox" data-k="solve"${m.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
-    $("#marks").innerHTML = lesson.marks.map(markRow).join("");
-    $("#markTime").value = lesson.marks.at(-1)?.time || "";
-    const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === markType)));
-    $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { markType = b.dataset.type; paintTypes(); $("#markText").focus(); }));
-    const addMark = () => {
-      const text = $("#markText").value.trim();
-      if (!text) return $("#markText").focus();
-      $("#marks").insertAdjacentHTML("beforeend", markRow({ type: markType, time: C.cleanTime($("#markTime").value), text, solve: $("#markSolve").checked }));
-      $("#markText").value = "";
-      ctx.growBox($("#markText"));
-      $("#markSolve").checked = false;
-      $("#markText").focus();
-      renderFixes();
-      changed();
+    // Time points and open questions go into the notes where the cursor is.
+    const notes = form.notes;
+    $("#noteTime").value = (notes.value.match(C.TIME_TOKEN) || []).at(-1)?.slice(1, -1) || "";
+    const insertLine = (text) => {
+      const at = notes.selectionStart ?? notes.value.length;
+      const before = notes.value.slice(0, at);
+      notes.setRangeText((before && !before.endsWith("\n") ? "\n" : "") + text, at, notes.selectionEnd ?? at, "end");
+      notes.focus();
+      notes.dispatchEvent(new Event("input", { bubbles: true }));
     };
-    $("#addMark").onclick = addMark;
-    $("#markText").addEventListener("keydown", (e) => { if (ctx.plainEnter(e)) { e.preventDefault(); addMark(); } });
-    $("#markTime").addEventListener("keydown", (e) => { if (ctx.plainEnter(e)) { e.preventDefault(); $("#markText").focus(); } });
-
-    let fixRows = [];
-    const paintFixCount = () => {
-      const open = fixRows.filter((r) => !$("[data-k=answer]", r).value.trim()).length;
-      $("#fixCount").textContent = fixRows.length ? (open ? `还有 ${open} 条待解决，已解决 ${fixRows.length - open} 条。` : `${fixRows.length} 条都解决了。`) : "";
+    $("#addTime").onclick = () => {
+      const t = C.cleanTime($("#noteTime").value);
+      if (!t) { toast("先在左边写上视频时间，比如 12:05。", "error"); return $("#noteTime").focus(); }
+      $("#noteTime").value = t;
+      insertLine("[" + t + "] ");
     };
-    function renderFixes() {
-      fixRows = $$("#marks [data-row]").filter((r) => $("[data-k=solve]", r).checked);
-      $("#fixList").innerHTML = fixRows.length
-        ? fixRows.map((r, i) => `<li><div class="q">${sym($(".mark-sym", r).dataset.type)}${$("[data-k=time]", r).value ? `<span class="page">${h($("[data-k=time]", r).value)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
-            <textarea class="input grow" data-solve="${i}" rows="1" maxlength="2000" placeholder="答案，没弄懂就留空" aria-label="答案">${h($("[data-k=answer]", r).value)}</textarea></li>`).join("")
-        : `<li class="muted small">还没有勾「待解决」的标记。</li>`;
-      paintFixCount();
-    }
-    renderFixes();
-    $("#fixList").addEventListener("input", (e) => {
-      const row = fixRows[e.target.dataset.solve];
-      if (row) { $("[data-k=answer]", row).value = e.target.value; paintFixCount(); }
-    });
-    $("#marks").addEventListener("input", renderFixes);
-    $("#marks").addEventListener("click", (e) => {
-      const s = e.target.closest(".mark-sym");
-      if (!s) return;
-      const next = C.MARKS[(typeIndex(s.dataset.type) + 1) % C.MARKS.length];
-      s.dataset.type = next.type;
-      s.textContent = next.type;
-      s.className = "mark-sym t" + typeIndex(next.type);
-      s.title = next.label + "（点一下换符号）";
-      renderFixes();
-      changed();
-    });
+    $("#addTask").onclick = () => insertLine("- [ ] ");
+    $("#noteTime").addEventListener("keydown", (e) => { if (ctx.plainEnter(e)) { e.preventDefault(); $("#addTime").click(); } });
     form.addEventListener("click", (e) => {
-      const x = e.target.closest(".x");
-      if (x) { x.closest("[data-row]").remove(); renderFixes(); changed(); }
-      const fmt = e.target.closest(".fmt");
-      if (fmt) ctx.wrapSelection(fmt.dataset.for === "markText" ? $("#markText") : form[fmt.dataset.for], fmt.dataset.fmt);
+      const fmt = e.target.closest(".fmt[data-fmt]");
+      if (fmt) ctx.wrapSelection(form[fmt.dataset.for], fmt.dataset.fmt);
     });
     form.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.target.matches("input") && !e.target.closest(".mark-input")) e.preventDefault();
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && /^[bi]$/i.test(e.key) && e.target.matches("#markText, [data-k=text], [data-solve], textarea[name=notes]")) {
+      if (e.key === "Enter" && e.target.matches("input")) e.preventDefault();
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && /^[bi]$/i.test(e.key) && e.target.matches("textarea[name=notes]")) {
         e.preventDefault();
         ctx.wrapSelection(e.target, e.key.toLowerCase() === "b" ? "**" : "*");
       }
@@ -682,13 +656,13 @@ export function createCourses(ctx) {
       C.normalizeLesson({
         ...lesson,
         title: form.title.value, link: form.link.value, date: form.date.value, done,
-        oneLine: form.oneLine.value, notes: form.notes.value, files,
-        marks: $$("#marks [data-row]").map((r) => ({ type: $(".mark-sym", r).dataset.type, time: $("[data-k=time]", r).value, text: $("[data-k=text]", r).value, solve: $("[data-k=solve]", r).checked, answer: $("[data-k=answer]", r).value })),
+        oneLine: form.oneLine.value, notes: form.notes.value, files, marks: [],
       });
     const paintProgress = () => {
-      const l = collect();
-      const open = C.openMarks(l).length;
-      $("#progress").textContent = `${l.marks.length} 个标记` + (open ? ` · 待解决 ${open}` : "");
+      const text = form.notes.value;
+      const times = (text.match(C.TIME_TOKEN) || []).length;
+      const open = C.openTasks(text);
+      $("#progress").textContent = `${times} 个时间点` + (open ? ` · 待解决 ${open}` : "");
     };
     paintProgress();
 
@@ -703,6 +677,7 @@ export function createCourses(ctx) {
     }
     form.addEventListener("input", changed);
     form.addEventListener("change", changed);
+    if (merged) changed();
     ctx.setLeave(async () => { clearTimeout(saveTimer); saveDraft(); return true; });
     window.onbeforeunload = () => { if (ctx.isDirty()) saveDraft(); };
     $("#discardDraft")?.addEventListener("click", async () => {

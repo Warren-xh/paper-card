@@ -7,7 +7,7 @@ import { validDate, todayISO, normalizeTags, validId, makeId, safeUrl, stripMd, 
 
 export const COURSE_DIR = "data/courses/";
 export const COURSES_INDEX_PATH = "data/courses-index.json";
-export const MAX_LESSONS = 300;
+export const MAX_LESSONS = 2000;
 export const MATERIAL_DIR = "materials/";
 export const MAX_MATERIALS = 100;
 
@@ -23,7 +23,7 @@ export const MARKS = Object.freeze([
 const MARK_TYPES = new Set(MARKS.map((m) => m.type));
 export const markLabel = (type) => MARKS.find((m) => m.type === type)?.label || "";
 
-const str = (value, max = 20000) => (typeof value === "string" ? value.slice(0, max) : "");
+const str = (value, max = Infinity) => (typeof value === "string" ? value.slice(0, max) : "");
 const LESSON_ID = /^[a-z0-9]{1,16}$/;
 // Video time: 5:07, 12:34 or 1:02:03.
 const TIME_RE = /^(\d{1,2}:)?\d{1,3}:[0-5]\d$/;
@@ -133,22 +133,22 @@ export function normalizeLesson(raw, seen = new Set()) {
   seen.add(id);
   return {
     id,
-    title: str(raw.title, 200).trim(),
-    link: safeUrl(str(raw.link, 500).trim()),
+    title: str(raw.title).trim(),
+    link: safeUrl(str(raw.link).trim()),
     date: validDate(raw.date) ? raw.date : "",
     done: !!raw.done,
-    oneLine: str(raw.oneLine, 400).trim(),
+    oneLine: str(raw.oneLine).trim(),
     marks: (Array.isArray(raw.marks) ? raw.marks : [])
       .map((m) => ({
         time: cleanTime(m?.time),
         type: MARK_TYPES.has(m?.type) ? m.type : "✎",
-        text: str(m?.text, 500).trim(),
+        text: str(m?.text).trim(),
         solve: !!m?.solve,
-        answer: str(m?.answer, 2000).trim(),
+        answer: str(m?.answer).trim(),
       }))
       .filter((m) => m.text)
-      .slice(0, 300),
-    notes: str(raw.notes, 50000),
+      .slice(0, 5000),
+    notes: str(raw.notes),
     files: (Array.isArray(raw.files) ? raw.files : [])
       .filter((f) => validMaterialPath(f?.path))
       .map((f) => ({ path: f.path, size: Number.isFinite(f.size) && f.size >= 0 ? Math.round(f.size) : 0 }))
@@ -161,15 +161,15 @@ export function normalizeCourse(raw) {
   if (!raw || typeof raw !== "object") throw new Error("课程格式不正确。");
   if (!validId(raw.id)) throw new Error("课程编号不正确。");
   const c = emptyCourse(raw.id);
-  c.title = str(raw.title, 200).trim();
-  c.teacher = str(raw.teacher, 120).trim();
-  c.link = safeUrl(str(raw.link, 500).trim());
+  c.title = str(raw.title).trim();
+  c.teacher = str(raw.teacher).trim();
+  c.link = safeUrl(str(raw.link).trim());
   c.tags = normalizeTags(raw.tags);
-  c.project = str(raw.project, 60).trim();
+  c.project = str(raw.project).trim();
   c.status = STATUS_LABELS[raw.status] ? raw.status : "learning";
   c.startDate = validDate(raw.startDate) ? raw.startDate : "";
-  c.goal = str(raw.goal, 300).trim();
-  c.summary = str(raw.summary, 50000);
+  c.goal = str(raw.goal).trim();
+  c.summary = str(raw.summary);
   const seen = new Set();
   c.lessons = (Array.isArray(raw.lessons) ? raw.lessons : [])
     .map((l) => normalizeLesson(l, seen))
@@ -183,8 +183,51 @@ export function normalizeCourse(raw) {
 /* ---------- lessons ---------- */
 export const progress = (c) => ({ done: c.lessons.filter((l) => l.done).length, total: c.lessons.length });
 
-// Marks flagged 待解决 without an answer yet.
+// Marks flagged 待解决 without an answer yet (lessons written before v4.3).
 export const openMarks = (lesson) => lesson.marks.filter((m) => m.solve && !m.answer);
+
+/* ---------- one notes box: time points and open questions inside the notes ---------- */
+// "- [ ] …" in the notes is an open question; "- [x] …" a solved one.
+const TASK_LINE = /^(\s*(?:[-*+]|\d+[.)])\s+)\[( |x|X)\]/;
+// Lines inside ``` code blocks are not questions.
+function taskLines(text) {
+  let code = false;
+  return String(text || "").split("\n").map((line, i) => [line, i]).filter(([line]) => {
+    if (/^\s*(```|~~~)/.test(line)) { code = !code; return false; }
+    return !code && TASK_LINE.test(line);
+  });
+}
+export const openTasks = (text) => taskLines(text).filter(([line]) => TASK_LINE.exec(line)[2] === " ").length;
+
+// Ticks or unticks the n-th question (counting from 0) in the notes.
+export function toggleTask(text, n) {
+  const lines = String(text || "").split("\n");
+  const hit = taskLines(text)[n];
+  if (!hit) return String(text || "");
+  const [line, i] = hit;
+  lines[i] = line.replace(TASK_LINE, (_, pre, mark) => pre + (mark === " " ? "[x]" : "[ ]"));
+  return lines.join("\n");
+}
+
+// Open questions in a lesson, old-style marks and notes together.
+export const openCount = (lesson) => openMarks(lesson).length + openTasks(lesson.notes);
+
+// "[12:05]" in the notes is a time point in the video.
+export const TIME_TOKEN = /\[((?:\d{1,2}:)?\d{1,3}:[0-5]\d)\](?!\()/g;
+
+// Lessons from before v4.3 kept their marks apart from the notes; this puts
+// them into the notes as lines, sorted by time, so there is one place to write.
+export function marksToNotes(lesson) {
+  if (!lesson.marks.length) return lesson;
+  const line = (m) => {
+    const t = m.time ? "[" + m.time + "] " : "";
+    const sym = m.type === "✎" ? "" : m.type + " ";
+    if (m.solve) return "- [" + (m.answer ? "x" : " ") + "] " + t + sym + m.text + (m.answer ? " → " + m.answer : "");
+    return "- " + t + sym + m.text;
+  };
+  const block = "### 边看边记\n\n" + marksByTime(lesson.marks).map(line).join("\n");
+  return { ...lesson, notes: (lesson.notes.trim() ? lesson.notes.replace(/\s+$/, "") + "\n\n" : "") + block + "\n", marks: [] };
+}
 
 // The first lesson not watched yet (where to continue).
 export const nextLesson = (c) => c.lessons.find((l) => !l.done) || null;
@@ -234,10 +277,10 @@ export function summarize(c) {
     lastDate: dates.at(-1) || c.startDate || "",
     lessons: p.total,
     done: p.done,
-    open: c.lessons.reduce((t, l) => t + openMarks(l).length, 0),
+    open: c.lessons.reduce((t, l) => t + openCount(l), 0),
     next: nextLesson(c)?.title || "",
     nextId: nextLesson(c)?.id || "",
-    text: plainText(c).slice(0, 4000),
+    text: plainText(c).slice(0, 20000),
     updatedAt: c.updatedAt,
   };
 }

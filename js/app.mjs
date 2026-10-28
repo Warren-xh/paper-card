@@ -11,8 +11,9 @@ import { startTranslation, getLang, setLang, LANGS } from "./i18n.mjs";
 import { createOverview } from "./overview-views.mjs";
 import { createPalette, kindIcon } from "./palette.mjs";
 import { startEnhancements, highlightCode } from "./enhance.mjs";
+import { createTerms } from "./terms-views.mjs";
 
-export const VERSION = "4.2";
+export const VERSION = "4.3";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -124,7 +125,7 @@ const FORMATTABLE = "#markText, [data-k=text], [data-solve], textarea:not([name=
 const IMAGE_FIELDS = "#markText, #stepText, [data-k=text], [data-solve], textarea.textarea:not(.one):not(.short):not(.code)";
 const imageButton = (name) => `<button type="button" class="btn quiet small" data-image="${name}" title="插入图片（也可以直接 Ctrl+V 粘贴截图）">插入图片</button>`;
 const mdTools = (name) =>
-  `<div class="md-tools"><button type="button" class="fmt" data-fmt="**" data-for="${name}" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="${name}" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${imageButton(name)}<span class="hint small paste-hint">可以直接 Ctrl+V 粘贴截图</span></div>`;
+  `<div class="md-tools"><button type="button" class="fmt" data-fmt="**" data-for="${name}" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="${name}" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button><button type="button" class="fmt term-btn" data-term-for="${name}" title="标为术语：先选中文字，再点这里，可以写中英文和解释并收进词库" aria-label="标为术语">术语</button>${imageButton(name)}<span class="hint small paste-hint">可以直接 Ctrl+V 粘贴截图</span></div>`;
 
 // Images are resized in the browser and kept in `images` (path → data URL) until
 // the editor saves; a Markdown image line is put where the cursor is.
@@ -352,6 +353,7 @@ async function loadIndex() {
   await lab.loadLogs();
   await courses.loadCourses();
   await maps.loadMaps();
+  await terms.loadTerms();
 }
 
 async function getCard(id) {
@@ -517,6 +519,19 @@ async function route() {
   window.onbeforeunload = null;
   // #/map/<id> pages use the full width; everything else does not.
   document.body.classList.toggle("wide", name === "map" && !!arg);
+  // #/terms is the term library; #/terms/<name> opens one term.
+  if (name === "terms") {
+    setMode("terms");
+    $$(".topnav a").forEach((a) => (a.dataset.nav === "terms" ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+    try {
+      await terms.page(decodeURIComponent(arg || ""));
+    } catch (error) {
+      console.error(error);
+      main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/terms">回到词库</a></p></div>`;
+    }
+    if (!arg) window.scrollTo(0, 0);
+    return;
+  }
   // #/today is the overview of everything.
   if (name === "today") {
     setMode("today");
@@ -616,6 +631,14 @@ const overview = createOverview({
   },
 });
 
+const terms = createTerms({
+  state, $, $$, h, toast, dialog, confirmDialog, store, renderMarkdown, renderInline, typesetMath, sortSelect,
+  readData: (path) => readData(path),
+  ensureUnlocked: () => ensureUnlocked(),
+  lock: (expired) => lock(expired),
+  loadCourseFiles: () => courses.loadAll(),
+});
+
 const palette = createPalette({
   state,
   loadCourseFiles: () => courses.loadAll(),
@@ -625,6 +648,7 @@ const palette = createPalette({
     { label: "新建一条实操记录", hint: "实操", href: "#/lab/new", keys: "new lab log" },
     { label: "添加课程", hint: "课程", href: "#/course/new", keys: "new course" },
     { label: "思维导图", hint: "导图", href: "#/map", keys: "map" },
+    { label: "词库", hint: state.terms.terms.length + " 个术语", href: "#/terms", keys: "terms glossary ciku" },
     ...(M.dueCards(state.index.cards).length ? [{ label: "开始回顾", hint: M.dueCards(state.index.cards).length + " 张", href: "#/review", keys: "review" }] : []),
     { label: "设置", href: "#/settings", keys: "settings" },
     { label: "切换明暗主题", run: () => $("#themeBtn").click(), keys: "theme dark light" },
@@ -1014,14 +1038,14 @@ async function editView(id) {
     ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，发布时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
     <form class="sheet" id="editor" autocomplete="off">
       <label class="field"><span class="visually-hidden">论文标题</span>
-        <input class="title-input" name="title" maxlength="300" placeholder="论文标题"></label>
+        <input class="title-input" name="title" placeholder="论文标题"></label>
       <div class="meta-grid">
-        <label class="field"><span>作者</span><input name="authors" maxlength="300" placeholder="作者姓名"></label>
+        <label class="field"><span>作者</span><input name="authors" placeholder="作者姓名"></label>
         <label class="field"><span>年份</span><input name="year" type="number" min="1800" max="2200" inputmode="numeric" placeholder="发表年份"></label>
-        <label class="field"><span>会议 / 期刊</span><input name="venue" maxlength="120" placeholder="会议或期刊名称"></label>
-        <label class="field"><span>链接</span><input name="link" maxlength="500" placeholder="网址、DOI 或 arXiv 编号"></label>
+        <label class="field"><span>会议 / 期刊</span><input name="venue" placeholder="会议或期刊名称"></label>
+        <label class="field"><span>链接</span><input name="link" placeholder="网址、DOI 或 arXiv 编号"></label>
         <label class="field"><span>标签</span><input name="tags" list="tagList" placeholder="用逗号分开"></label>
-        <label class="field"><span>项目</span><input name="project" list="projList" maxlength="60" placeholder="可以留空"></label>
+        <label class="field"><span>项目</span><input name="project" list="projList" placeholder="可以留空"></label>
         <label class="field"><span>阅读日期</span><input name="readDate" type="date"></label>
         <div class="field"><span class="label" id="statusLabel">状态</span><div class="seg" role="group" aria-labelledby="statusLabel">
           <button type="button" data-status="reading">在读</button><button type="button" data-status="done">读完</button></div></div>
@@ -1035,16 +1059,16 @@ async function editView(id) {
 
       <section class="stage"><h2><span class="stage-n">1</span>读之前</h2>
         <label class="field"><span>为什么读这篇、想从里面得到什么？（一行）</span>
-          <input name="why" maxlength="300" placeholder="为什么读这篇，想从中得到什么"></label></section>
+          <input name="why" placeholder="为什么读这篇，想从中得到什么"></label></section>
 
       <section class="stage"><h2><span class="stage-n">2</span>边读边记</h2>
         <p class="hint">只打标记，不写长句。选一个符号，写几个字，回车就记下一条。页码从 1 开始，翻页时点 ＋（也可以直接改数字，或清空不填）。觉得这一条还没解决，就勾上「待解决」，它会出现在下面的「初步解决」里。</p>
         <div class="mark-input">
           <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="标记类型">${M.MARKS.map((m, k) => `<button type="button" role="radio" class="t${k}" data-type="${m.type}" aria-checked="${k === 0}"><b>${m.type}</b>${m.label}</button>`).join("")}</div>
-            <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${imageButton("markText")}</div></div></div>
+            <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="markSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="markText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="markText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button><button type="button" class="fmt term-btn" data-term-for="markText" title="标为术语：先选中文字，再点这里，可以写中英文和解释并收进词库" aria-label="标为术语">术语</button>${imageButton("markText")}</div></div></div>
           <div class="mark-line">
             <div class="page-step"><button type="button" class="step" data-step="-1" aria-label="上一页">−</button><input class="input page" id="markPage" placeholder="页" maxlength="12" inputmode="numeric" aria-label="页码"><button type="button" class="step" data-step="1" aria-label="下一页">＋</button></div>
-            <textarea class="input grow" id="markText" rows="1" maxlength="300" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done"></textarea>
+            <textarea class="input grow" id="markText" rows="1" placeholder="写几个字，回车记下" aria-label="标记内容" enterkeyhint="done"></textarea>
             <button type="button" class="btn" id="addMark">记下</button></div>
         </div>
         <ol class="marks-list" id="marks"></ol></section>
@@ -1063,7 +1087,7 @@ async function editView(id) {
 
         <div class="esec">${secHead(1, "最重要的一栏。点下面的句式，直接打字填空，按 Tab 跳到下一个空。")}
           <div class="prompts"><button type="button" id="oneLineTpl">用【什么方法】解决了【什么问题】，结果【比谁好多少】</button></div>
-          <textarea class="textarea one" name="oneLine" rows="2" maxlength="400" placeholder="用一句话概括这篇论文"></textarea></div>
+          <textarea class="textarea one" name="oneLine" rows="2" placeholder="用一句话概括这篇论文"></textarea></div>
 
         <div class="esec">${secHead(2, "它要解决什么问题？之前的方法差在哪？")}
           <textarea class="textarea" name="pain" rows="3"></textarea>${tools("pain")}</div>
@@ -1121,7 +1145,7 @@ async function editView(id) {
   let markType = M.MARKS[0].type;
   const typeIndex = (t) => M.MARKS.findIndex((m) => m.type === t);
   const markRow = (m) =>
-    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><textarea class="input grow" data-k="text" rows="1" maxlength="300" aria-label="标记内容">${h(m.text)}</textarea><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「初步解决」里"><input type="checkbox" data-k="solve"${m.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
+    `<li data-row="mark"><button type="button" class="mark-sym t${typeIndex(m.type)}" data-type="${m.type}" title="${M.markLabel(m.type)}（点一下换符号）">${m.type}</button><input class="input page" data-k="page" value="${h(m.page)}" placeholder="页" aria-label="页码"><textarea class="input grow" data-k="text" rows="1" aria-label="标记内容">${h(m.text)}</textarea><input type="hidden" data-k="answer" value="${h(m.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「初步解决」里"><input type="checkbox" data-k="solve"${m.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
   $("#marks").innerHTML = card.marks.map(markRow).join("");
   const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === markType)));
   $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { markType = b.dataset.type; paintTypes(); $("#markText").focus(); }));
@@ -1162,7 +1186,7 @@ async function editView(id) {
       ? solveRows.map((r, i) => {
           const page = $("[data-k=page]", r).value.trim();
           return `<li><div class="q">${markSym($(".mark-sym", r).dataset.type)}${page ? `<span class="page">p.${h(page)}</span>` : ""}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
-            <textarea class="input grow" data-solve="${i}" rows="1" maxlength="2000" placeholder="这个问题的答案，没弄懂就留空" aria-label="答案">${h($("[data-k=answer]", r).value)}</textarea></li>`;
+            <textarea class="input grow" data-solve="${i}" rows="1" placeholder="这个问题的答案，没弄懂就留空" aria-label="答案">${h($("[data-k=answer]", r).value)}</textarea></li>`;
         }).join("")
       : `<li class="muted small">还没有勾「待解决」的标记。</li>`;
     paintSolveCount();
@@ -1499,9 +1523,9 @@ async function settingsView() {
       <h1 style="margin-top:0">设置</h1>
       ${!vault ? `<div class="banner warn"><span>还没有设置密码，网站暂时不能编辑。</span><a class="btn primary" href="#/setup">开始设置</a></div>` : ""}
       <form class="form-grid" id="siteForm">
-        <label class="field"><span>网站标题</span><input name="title" maxlength="40" value="${h(site.title)}"></label>
-        <label class="field"><span>一句话介绍</span><input name="subtitle" maxlength="120" value="${h(site.subtitle)}"></label>
-        <label class="field"><span>作者</span><input name="author" maxlength="40" value="${h(site.author)}" placeholder="可以留空"></label>
+        <label class="field"><span>网站标题</span><input name="title" value="${h(site.title)}"></label>
+        <label class="field"><span>一句话介绍</span><input name="subtitle" value="${h(site.subtitle)}"></label>
+        <label class="field"><span>作者</span><input name="author" value="${h(site.author)}" placeholder="可以留空"></label>
         <div class="btn-row"><button class="btn primary">保存设置</button><span class="muted small">保存后会发布到网站。</span></div>
       </form>
     </div>
@@ -1516,7 +1540,7 @@ async function settingsView() {
     <div class="sheet">
       <h2 style="margin-top:0">备份</h2>
       <p class="muted">所有卡片都保存在 GitHub 仓库 <a href="https://github.com/${h(state.gh.repo)}" target="_blank" rel="noopener">${h(state.gh.repo)}</a> 里，每次发布都有历史记录。也可以随时下载一份。</p>
-      <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportCourses">下载全部课程笔记（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
+      <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportCourses">下载全部课程笔记（Markdown）</button><button class="btn" id="exportTerms">下载词库（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
     </div>
     <div class="sheet">
       <h2 style="margin-top:0">界面语言</h2>
@@ -1554,7 +1578,8 @@ async function settingsView() {
   $("#exportMd").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".md", (await loadAll()).map((c) => M.cardToMarkdown(c, titles())).join("\n---\n\n"));
   $("#exportLogs").onclick = async () => download("实操记录-全部-" + M.todayISO() + ".md", (await lab.loadAll()).map((l) => L.logToMarkdown(l, titles())).join("\n---\n\n"));
   $("#exportCourses").onclick = async () => download("课程笔记-全部-" + M.todayISO() + ".md", (await courses.loadAll()).map(CO.courseToMarkdown).join("\n---\n\n"));
-  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll(), courses: await courses.loadAll(), maps: await maps.loadAll() }, null, 2), "application/json");
+  $("#exportTerms").onclick = () => download("词库-" + M.todayISO() + ".md", terms.toMarkdown());
+  $("#exportJson").onclick = async () => download("文献卡片-全部-" + M.todayISO() + ".json", JSON.stringify({ site: state.site, cards: await loadAll(), logs: await lab.loadAll(), courses: await courses.loadAll(), maps: await maps.loadAll(), terms: state.terms }, null, 2), "application/json");
 }
 
 async function changePassword() {

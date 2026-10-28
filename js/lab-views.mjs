@@ -312,14 +312,14 @@ export function createLab(ctx) {
       ${restored ? `<div class="banner warn"><span>已恢复这台设备上还没保存的草稿。</span><button class="btn quiet" id="discardDraft">放弃草稿</button></div>` : ""}
       ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，保存时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
       <form class="sheet" id="editor" autocomplete="off">
-        <label class="field"><span class="visually-hidden">标题</span><input class="title-input" name="title" maxlength="200" placeholder="这次做了什么"></label>
+        <label class="field"><span class="visually-hidden">标题</span><input class="title-input" name="title" placeholder="这次做了什么"></label>
         <div class="meta-grid">
           <label class="field"><span>日期</span><input name="date" type="date"></label>
           <label class="field"><span>用时（小时）</span><input name="hours" type="number" min="0" max="200" step="0.5" inputmode="decimal" placeholder="可以留空"></label>
-          <label class="field"><span>项目</span><input name="project" list="lprojList" maxlength="60" placeholder="可以留空"></label>
+          <label class="field"><span>项目</span><input name="project" list="lprojList" placeholder="可以留空"></label>
           <label class="field"><span>标签</span><input name="tags" list="ltagList" placeholder="用逗号分开"></label>
-          <label class="field"><span>环境 / 工具</span><input name="env" maxlength="200" placeholder="语言、框架、硬件等"></label>
-          <label class="field"><span>代码链接</span><input name="link" maxlength="500" placeholder="仓库、提交或笔记本的网址"></label>
+          <label class="field"><span>环境 / 工具</span><input name="env" placeholder="语言、框架、硬件等"></label>
+          <label class="field"><span>代码链接</span><input name="link" placeholder="仓库、提交或笔记本的网址"></label>
           <div class="field"><span class="label" id="lstatusLabel">状态</span><div class="seg" role="group" aria-labelledby="lstatusLabel">
             <button type="button" data-status="doing">进行中</button><button type="button" data-status="done">完成</button></div></div>
         </div>
@@ -332,20 +332,20 @@ export function createLab(ctx) {
         <datalist id="ltagList">${allTags.map((t) => `<option value="${h(t)}">`).join("")}</datalist>
 
         <section class="stage"><h2><span class="stage-n">1</span>开始前</h2>
-          <label class="field"><span>目标（一行）</span><input name="goal" maxlength="300" placeholder="这次想做成什么、验证什么"></label></section>
+          <label class="field"><span>目标（一行）</span><input name="goal" placeholder="这次想做成什么、验证什么"></label></section>
 
         <section class="stage"><h2><span class="stage-n">2</span>过程中</h2>
           <p class="hint">随手记，每条自动记下时间。选一个符号，写几个字，回车记下一条。卡住的问题勾上「待解决」，做完后在下面写怎么解决的。</p>
           <div class="mark-input">
             <div class="mark-types"><div class="mark-kinds" role="radiogroup" aria-label="记录类型">${L.STEPS.map((s, k) => `<button type="button" role="radio" class="s${k}" data-type="${s.type}" aria-checked="${k === 0}"><b>${s.type}</b>${s.label}</button>`).join("")}</div>
-              <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="stepSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="stepText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="stepText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button>${ctx.imageButton("stepText")}</div></div></div>
-            <div class="mark-line"><textarea class="input grow" id="stepText" rows="1" maxlength="500" placeholder="做了什么、看到什么，回车记下；命令可用 \`反引号\` 包住" aria-label="过程记录" enterkeyhint="done"></textarea><button type="button" class="btn" id="addStep">记下</button></div>
+              <div class="mark-opts"><label class="solve-flag"><input type="checkbox" id="stepSolve"> 待解决</label><div class="fmt-pair"><button type="button" class="fmt" data-fmt="**" data-for="stepText" title="加粗（⌘/Ctrl + B）" aria-label="加粗"><b>B</b></button><button type="button" class="fmt" data-fmt="*" data-for="stepText" title="斜体（⌘/Ctrl + I）" aria-label="斜体"><i>I</i></button><button type="button" class="fmt term-btn" data-term-for="stepText" title="标为术语：先选中文字，再点这里，可以写中英文和解释并收进词库" aria-label="标为术语">术语</button>${ctx.imageButton("stepText")}</div></div></div>
+            <div class="mark-line"><textarea class="input grow" id="stepText" rows="1" placeholder="做了什么、看到什么，回车记下；命令可用 \`反引号\` 包住" aria-label="过程记录" enterkeyhint="done"></textarea><button type="button" class="btn" id="addStep">记下</button></div>
           </div>
           <ol class="marks-list" id="steps"></ol></section>
 
         <section class="stage"><h2><span class="stage-n">3</span>做完后</h2>
           <div class="esec"><h3>结论</h3><p class="hint">一句话：做成了什么、学到了什么。</p>
-            <textarea class="textarea one" name="conclusion" rows="2" maxlength="400" placeholder="一句话总结这次的结果"></textarea></div>
+            <textarea class="textarea one" name="conclusion" rows="2" placeholder="一句话总结这次的结果"></textarea></div>
           <div class="esec"><h3>问题与解决</h3><p class="hint">勾了「待解决」的记录列在这里，写下怎么解决的；没解决就留空。</p>
             <p class="small" id="fixCount"></p>
             <ol class="solve-list" id="fixList"></ol>
@@ -386,7 +386,7 @@ export function createLab(ctx) {
     let stepType = L.STEPS[0].type;
     const typeIndex = (t) => L.STEPS.findIndex((s) => s.type === t);
     const stepRow = (s) =>
-      `<li data-row="step"><button type="button" class="mark-sym s${typeIndex(s.type)}" data-type="${s.type}" title="${L.stepLabel(s.type)}（点一下换符号）">${s.type}</button><input class="input page" data-k="time" value="${h(s.time)}" placeholder="时间" aria-label="时间" maxlength="5"><textarea class="input grow" data-k="text" rows="1" maxlength="500" aria-label="记录内容">${h(s.text)}</textarea><input type="hidden" data-k="answer" value="${h(s.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「问题与解决」里"><input type="checkbox" data-k="solve"${s.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
+      `<li data-row="step"><button type="button" class="mark-sym s${typeIndex(s.type)}" data-type="${s.type}" title="${L.stepLabel(s.type)}（点一下换符号）">${s.type}</button><input class="input page" data-k="time" value="${h(s.time)}" placeholder="时间" aria-label="时间" maxlength="5"><textarea class="input grow" data-k="text" rows="1" aria-label="记录内容">${h(s.text)}</textarea><input type="hidden" data-k="answer" value="${h(s.answer || "")}"><label class="row-flag" title="待解决：勾上后出现在「问题与解决」里"><input type="checkbox" data-k="solve"${s.solve ? " checked" : ""}><span>待解决</span></label><button type="button" class="x" aria-label="删除">×</button></li>`;
     $("#steps").innerHTML = log.steps.map(stepRow).join("");
     const paintTypes = () => $$(".mark-kinds [data-type]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.type === stepType)));
     $$(".mark-kinds [data-type]").forEach((b) => (b.onclick = () => { stepType = b.dataset.type; paintTypes(); $("#stepText").focus(); }));
@@ -414,7 +414,7 @@ export function createLab(ctx) {
       fixRows = $$("#steps [data-row]").filter((r) => $("[data-k=solve]", r).checked);
       $("#fixList").innerHTML = fixRows.length
         ? fixRows.map((r, i) => `<li><div class="q">${sym($(".mark-sym", r).dataset.type)}<span>${renderInline($("[data-k=text]", r).value)}</span></div>
-            <textarea class="input grow" data-solve="${i}" rows="1" maxlength="2000" placeholder="怎么解决的，没解决就留空" aria-label="解决办法">${h($("[data-k=answer]", r).value)}</textarea></li>`).join("")
+            <textarea class="input grow" data-solve="${i}" rows="1" placeholder="怎么解决的，没解决就留空" aria-label="解决办法">${h($("[data-k=answer]", r).value)}</textarea></li>`).join("")
         : `<li class="muted small">还没有勾「待解决」的记录。</li>`;
       paintFixCount();
     }

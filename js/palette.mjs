@@ -11,6 +11,7 @@ const ICONS = {
   course: '<path d="M3 8l9-4 9 4-9 4z"/><path d="M7 10v5c3 2 7 2 10 0v-5"/>',
   lesson: '<path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M8 9h8M8 13h5"/>',
   map: '<circle cx="12" cy="12" r="2.5"/><circle cx="4.5" cy="6" r="1.8"/><circle cx="19.5" cy="6" r="1.8"/><circle cx="4.5" cy="18" r="1.8"/><circle cx="19.5" cy="18" r="1.8"/><path d="M10 11 6 7M14 11l4-4M10 13l-4 4M14 13l4 4"/>',
+  term: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/>',
   action: '<path d="M13 3 4 14h7l-1 7 9-11h-7z"/>',
 };
 export const kindIcon = (kind) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[kind] || ICONS.action}</svg>`;
@@ -53,7 +54,7 @@ export function createPalette({ state, loadCourseFiles, actions }) {
   let lastFocus = null;
 
   const rebuild = (courseFiles = []) => {
-    entries = S.buildEntries({ cards: state.index.cards, logs: state.logs.logs, courses: state.courses.courses, courseFiles, maps: state.maps.maps });
+    entries = S.buildEntries({ cards: state.index.cards, logs: state.logs.logs, courses: state.courses.courses, courseFiles, maps: state.maps.maps, terms: state.terms?.terms || [] });
   };
 
   function render() {
@@ -66,7 +67,7 @@ export function createPalette({ state, loadCourseFiles, actions }) {
     } else {
       const found = S.searchEntries(entries, q, 40);
       groups = [["快速操作", acts.map((a) => ({ ...a, kind: "action" }))]];
-      for (const kind of ["card", "lesson", "course", "log", "map"]) groups.push([S.KIND_LABELS[kind], found.filter((e) => e.kind === kind).slice(0, 8)]);
+      for (const kind of ["term", "card", "lesson", "course", "log", "map"]) groups.push([S.KIND_LABELS[kind], found.filter((e) => e.kind === kind).slice(0, 8)]);
     }
     groups = groups.filter(([, items]) => items.length);
     shown = groups.flatMap(([, items]) => items);

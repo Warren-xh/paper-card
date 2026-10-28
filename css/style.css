@@ -910,3 +910,53 @@ body.palette-open, body.viewing { overflow: hidden; }
 :root[data-theme="dark"] .hljs-bullet { color: #f5b07a; }
 :root[data-theme="dark"] .hljs-template-variable { color: #6fd0d4; }
 :root[data-theme="dark"] .hljs-deletion { color: #ef7b7b; }
+
+/* ---------- v4.3: term library, one notes box per lesson ---------- */
+:root { --c-term: #12807a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-term: #5cc9c0; } }
+:root[data-theme="dark"] { --c-term: #5cc9c0; }
+body[data-mode="terms"] { --acc: var(--c-term); }
+.k-term { --tc: var(--c-term); }
+
+/* A marked term in notes: a dotted underline; pointing at it shows the card. */
+.term { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--c-term) 80%, transparent); text-decoration-thickness: 2px; text-underline-offset: 4px; background: color-mix(in srgb, var(--c-term) 8%, transparent); border-radius: 3px; padding: 0 2px; cursor: help; }
+.term:hover, .term:focus-visible { background: color-mix(in srgb, var(--c-term) 18%, transparent); outline: none; }
+.term-pop { position: fixed; z-index: 85; background: var(--page); color: var(--ink); border: 1px solid color-mix(in srgb, var(--c-term) 35%, var(--rule)); border-radius: 12px; box-shadow: var(--shadow-2); padding: 12px 14px 10px; font-size: 14.5px; line-height: 1.55; animation: rise 0.14s ease-out; max-height: min(60vh, 420px); overflow-y: auto; }
+.term-pop::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c-term); border-radius: 12px 0 0 12px; }
+.tp-head { display: grid; gap: 1px; margin-bottom: 6px; }
+.tp-head b { font-family: var(--serif); font-size: 17px; }
+.tp-head span { color: var(--ink-2); font-size: 13px; }
+.tp-names { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 8px; font-size: 13.5px; }
+.tp-names dt { color: var(--pencil); }
+.tp-names dd { margin: 0; }
+.tp-def { font-size: 14px; border-top: 1px dashed var(--rule); padding-top: 6px; }
+.tp-link { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--c-term); }
+.fmt.term-btn { width: auto; padding: 0 8px; font-family: var(--sans); font-size: 13px; color: var(--c-term); border-color: color-mix(in srgb, var(--c-term) 40%, var(--rule)); }
+.fmt.term-btn:hover { background: color-mix(in srgb, var(--c-term) 10%, var(--page)); color: var(--c-term); }
+.term-form h2 { margin-top: 0; }
+.term-form .field + .meta-grid { margin-top: 12px; }
+dialog:has(.term-form) { width: min(560px, calc(100vw - 32px)); }
+
+/* The term library page */
+.term-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-top: 18px; align-items: start; }
+.term-card { background: var(--page); border: 1px solid color-mix(in srgb, var(--rule) 85%, transparent); border-left: 4px solid var(--c-term); border-radius: 12px; padding: 14px 16px 10px; box-shadow: var(--shadow-1); display: grid; gap: 8px; min-width: 0; scroll-margin-top: 90px; transition: box-shadow 0.18s, border-color 0.18s; }
+.term-card:hover { box-shadow: var(--shadow-2); }
+.term-card.focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-term) 35%, transparent), var(--shadow-2); }
+.tc-head h2 { margin: 0; font-size: 19px; overflow-wrap: anywhere; }
+.tc-head p { margin: 2px 0 0; color: var(--ink-2); font-size: 14px; }
+.tc-def { font-size: 14.5px; }
+.tc-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; border-top: 1px dashed var(--rule); padding-top: 6px; }
+.tc-foot .btn.quiet { padding: 3px 6px; }
+.tc-actions { display: flex; gap: 2px; margin-left: auto; }
+.tc-used { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.tc-used a { display: flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; font-size: 14px; padding: 4px 6px; border-radius: 8px; min-width: 0; }
+.tc-used a:hover { background: color-mix(in srgb, var(--tc) 9%, var(--page)); }
+
+/* One notes box per lesson: a small toolbar for time points and questions */
+.note-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; padding: 8px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper); }
+.note-tools .time-input { width: 76px; }
+.textarea.notes-big { min-height: 320px; }
+.time-tag { font-family: var(--mono); font-size: 12.5px; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 0 6px; }
+.lesson-notes li.task input[data-task] { cursor: pointer; width: 16px; height: 16px; vertical-align: -2px; }
+.lesson-notes li.task:has(input:checked) { color: var(--ink-2); }
+.lesson-notes li.task:has(input:not(:checked)) { font-weight: 600; }

@@ -26,6 +26,12 @@ function inline(text, opts) {
   s = s.replace(/`([^`\n]+)`/g, (_, code) => keep("<code>" + escapeHtml(code) + "</code>"));
   s = s.replace(/\$\$([^$]+)\$\$/g, (_, m) => keep('<span class="math display">' + escapeHtml(m) + "</span>"));
   s = s.replace(/(^|[^\\$])\$([^$\n]+?)\$(?!\d)/g, (_, pre, m) => pre + keep('<span class="math">' + escapeHtml(m) + "</span>"));
+  // [[term]] or [[shown|term]]: a term from the term library (词库).
+  s = s.replace(/\[\[([^[\]|\n]+?)(?:\|([^[\]\n]+?))?\]\]/g, (_, shown, name) =>
+    keep('<span class="term" tabindex="0" role="button" data-term="' + escapeHtml((name || shown).trim()) + '">' + escapeHtml(shown.trim()) + "</span>"));
+  // [12:05]: a time in a video; opts.timeTag can turn it into a button.
+  s = s.replace(/\[((?:\d{1,2}:)?\d{1,3}:[0-5]\d)\](?!\()/g, (_, t) =>
+    keep(opts.timeTag ? opts.timeTag(t) : '<span class="time-tag">' + escapeHtml(t) + "</span>"));
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_, alt, src, title) => {
     const href = safeHref(src, { image: true, resolveImage: opts.resolveImage });
     if (!href) return keep(escapeHtml(alt));
@@ -94,7 +100,9 @@ function parseList(lines, start, opts) {
       let check = "";
       const task = text.match(/^\[( |x|X)\]\s+(.*)$/);
       if (task) {
-        check = '<input type="checkbox" disabled' + (task[1] !== " " ? " checked" : "") + "> ";
+        // With opts.tasks the boxes can be ticked; data-task counts them through the text.
+        const n = opts.tasks ? opts.tasks.n++ : -1;
+        check = '<input type="checkbox"' + (opts.tasks ? ' data-task="' + n + '" aria-label="已解决"' : " disabled") + (task[1] !== " " ? " checked" : "") + "> ";
         text = task[2];
       }
       const rest = body.slice(1);
