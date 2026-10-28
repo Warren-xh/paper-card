@@ -1,7 +1,31 @@
 {
  "version": 1,
- "updatedAt": "2026-10-27T16:02:58.552Z",
+ "updatedAt": "2026-10-28T16:53:54.401Z",
  "cards": [
+  {
+   "id": "20261028-blog-pdb2",
+   "title": "BLOG-模型到符合 AI 系统的转变",
+   "authors": "",
+   "year": null,
+   "venue": "",
+   "tags": [
+    "BLOG"
+   ],
+   "project": "",
+   "readDate": "2026-10-28",
+   "status": "reading",
+   "oneLine": "",
+   "questions": 0,
+   "pdf": false,
+   "marks": 1,
+   "filled": 0,
+   "links": [],
+   "due": "",
+   "level": 0,
+   "reviews": 0,
+   "text": "BLOG-模型到符合 AI 系统的转变 BLOG 了解转变的过程 AI 成果越来越多地由多个相互作用的组件构成的系统，而不是单独模型",
+   "updatedAt": "2026-10-28T16:53:54.401Z"
+  },
   {
    "id": "20261027-transformer-6zjn",
    "title": "Transformer-based Multi-task Learning for disaster tweet categorisation",

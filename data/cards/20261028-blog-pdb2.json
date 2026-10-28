@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "20261028-blog-pdb2",
+  "title": "BLOG-模型到符合 AI 系统的转变",
+  "authors": "",
+  "year": null,
+  "venue": "",
+  "link": "https://bair.berkeley.edu/blog/2024/02/18/compound-ai-systems/",
+  "pdf": "",
+  "pdfName": "",
+  "tags": [
+    "BLOG"
+  ],
+  "project": "",
+  "readDate": "2026-10-28",
+  "status": "reading",
+  "doneAt": "",
+  "why": "了解转变的过程",
+  "marks": [
+    {
+      "type": "!",
+      "page": "",
+      "text": "AI 成果越来越多地由多个相互作用的组件构成的系统，而不是单独模型",
+      "answer": "",
+      "solve": false
+    }
+  ],
+  "solved": "",
+  "oneLine": "",
+  "pain": "",
+  "idea": "",
+  "proof": {
+    "datasets": "",
+    "baselines": "",
+    "numbers": ""
+  },
+  "doubts": "",
+  "relevance": "",
+  "links": [],
+  "linkNote": "",
+  "notes": "",
+  "srs": null,
+  "reviews": [],
+  "createdAt": "2026-10-28T16:53:54.401Z",
+  "updatedAt": "2026-10-28T16:53:54.401Z"
+}
