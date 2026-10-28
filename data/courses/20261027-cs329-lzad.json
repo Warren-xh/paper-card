@@ -13,25 +13,27 @@
  "lessons": [
   {
    "id": "j2p44a73",
-   "title": "需要用 ai 进行学习，虽然 ai 明显导致学生都掌握率变低",
+   "title": "Why ai agent",
    "link": "",
    "date": "",
    "done": false,
    "oneLine": "",
    "marks": [],
-   "notes": ""
+   "notes": "",
+   "files": []
   },
   {
    "id": "l4197zbc",
-   "title": "Agent = planning + Memory -> LLM core -> Tools -> Agent actions",
+   "title": "",
    "link": "",
    "date": "",
    "done": false,
    "oneLine": "",
    "marks": [],
-   "notes": ""
+   "notes": "",
+   "files": []
   }
  ],
  "createdAt": "2026-10-27T17:59:36.874Z",
- "updatedAt": "2026-10-27T17:59:36.874Z"
+ "updatedAt": "2026-10-28T13:51:19.278Z"
 }

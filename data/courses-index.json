@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-10-27T17:59:36.874Z",
+ "updatedAt": "2026-10-28T13:51:19.278Z",
  "courses": [
   {
    "id": "20261027-cs329-lzad",
@@ -15,9 +15,10 @@
    "lessons": 2,
    "done": 0,
    "open": 0,
-   "next": "需要用 ai 进行学习，虽然 ai 明显导致学生都掌握率变低",
-   "text": "斯坦福cs329 why ai agent 了解这门课是干嘛的 需要用 ai 进行学习，虽然 ai 明显导致学生都掌握率变低 Agent = planning + Memory -> LLM core -> Tools -> Agent actions",
-   "updatedAt": "2026-10-27T17:59:36.874Z"
+   "next": "Why ai agent",
+   "nextId": "j2p44a73",
+   "text": "斯坦福cs329 why ai agent 了解这门课是干嘛的 Why ai agent",
+   "updatedAt": "2026-10-28T13:51:19.278Z"
   }
  ]
 }
