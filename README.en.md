@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.4** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.5** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -74,9 +74,11 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 
 - A course holds its lessons: teacher / platform, link and why you're taking it. Add all lessons at once (one per line) and reorder them any time.
 - The course page lists “Lesson 1, Lesson 2, …”; open any lesson for:
-  - **Notes**: key points, formulas, code and screenshots (paste screenshots with Ctrl+V).
+  - **While watching**: one entry at a time, like a paper's marks — pick a symbol (didn't get it / key point / useful / note), add the video time (optional), write a few words and press Enter; on the lesson page, click a time and the video jumps there.
+  - **Questions & answers**: entries ticked “Open” are listed here for their answers.
+  - **Exercises**: homework for the lesson, exercises you found, and how you did them.
   - **Slides & materials**: upload slide PDFs, PPTs, handouts, images and more (or drag them in); open or download them from the lesson page, with images shown as thumbnails.
-  - Everything you jot while watching goes in that one box: **⏱ Time** inserts a video time (click it on the lesson page and the video jumps there), **☐ Open** adds a question you can tick off on the lesson page once solved; then a one-line summary of the lesson.
+  - **Afterwards**: a one-line summary; anything that doesn't fit as entries (code, tables) goes in **Other notes**.
 - The course page shows a progress bar and the lesson list — click a circle to mark a lesson watched; **Continue** jumps to the next unwatched lesson. Write your takeaways when you finish.
 
 **Maps — mind maps**
@@ -179,7 +181,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.4"
+git commit -m "Paper Cards v4.5"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```

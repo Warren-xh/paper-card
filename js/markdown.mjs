@@ -37,7 +37,8 @@ function inline(text, opts) {
     if (!href) return keep(escapeHtml(alt));
     return keep(
       '<figure class="md-img"><img src="' + escapeHtml(href) + '" alt="' + escapeHtml(alt) + '" loading="lazy">' +
-        (alt || title ? "<figcaption>" + escapeHtml(title || alt) + "</figcaption>" : "") + "</figure>",
+        // Pasted screenshots are all called "截图"; that name is not worth a caption.
+        ((alt && alt !== "截图") || title ? "<figcaption>" + escapeHtml(title || alt) + "</figcaption>" : "") + "</figure>",
     );
   });
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
@@ -54,7 +55,7 @@ function inline(text, opts) {
   s = s
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_]+)__/g, "<strong>$1</strong>")
-    .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/(^|[^*])\*([^*\s](?:[^*]*?[^*\s])?)\*(?!\*)/g, "$1<em>$2</em>")
     .replace(/~~([^~]+)~~/g, "<del>$1</del>")
     .replace(/==([^=]+)==/g, "<mark>$1</mark>");
   return s.replace(/\u0000(\d+)\u0000/g, (_, i) => stash[+i]);

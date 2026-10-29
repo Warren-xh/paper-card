@@ -67,7 +67,7 @@ test("terms, times and questions in Markdown", () => {
   assert.equal(M.stripMd("学 [[注意力|attention]] 和 [[RNN]]"), "学 注意力 和 RNN");
 });
 
-test("lessons keep one notes box: time points and questions inside it", () => {
+test("questions and time points inside a lesson's free notes still work", () => {
   const notes = "要点\n- [ ] 为什么慢\n```\n- [ ] 不算\n```\n  - [x] 已懂\n* [ ] 还有";
   assert.equal(C.openTasks(notes), 2);
   const once = C.toggleTask(notes, 0);
@@ -83,12 +83,35 @@ test("lessons keep one notes box: time points and questions inside it", () => {
     { time: "", type: "✎", text: "随手", solve: true, answer: "懂了" },
   ] });
   assert.equal(C.openCount(old), 1);
-  const merged = C.marksToNotes(old);
-  assert.deepEqual(merged.marks, []);
-  assert.equal(merged.notes, "我的笔记\n\n### 边看边记\n\n- [ ] [3:20] ? 没懂\n- [12:05] ! 重点\n- [x] 随手 → 懂了\n");
-  assert.equal(C.openCount(merged), 1);
-  assert.equal(C.marksToNotes(merged), merged);
-  assert.equal(C.marksToNotes(C.normalizeLesson({ id: "x1", marks: [{ text: "只有标记" }] })).notes, "### 边看边记\n\n- 只有标记\n");
+});
+
+test("a v4.3 notes box is split into one mark per line", () => {
+  const lesson = C.normalizeLesson({ id: "abc123", practice: "作业 1", marks: [{ time: "1:00", type: "!", text: "原有" }], notes: [
+    "我的笔记 **重点**", "", "### 边看边记", "", "- [ ] [3:20] ? 没懂", "- [12:05] ! 重点", "- [x] 随手 → 懂了", "- [x] 只勾了", "## 小标题", "1.AlphaCode2 编号保留",
+  ].join("\n") });
+  const split = C.notesToMarks(lesson);
+  assert.equal(split.notes, "");
+  assert.equal(split.practice, "作业 1");
+  assert.deepEqual(split.marks.map((m) => [m.time, m.type, m.text, m.solve, m.answer]), [
+    ["1:00", "!", "原有", false, ""],
+    ["", "✎", "我的笔记 **重点**", false, ""],
+    ["3:20", "?", "没懂", true, ""],
+    ["12:05", "!", "重点", false, ""],
+    ["", "✎", "随手", true, "懂了"],
+    ["", "✎", "只勾了", true, "已解决"],
+    ["", "✎", "**小标题**", false, ""],
+    ["", "✎", "1.AlphaCode2 编号保留", false, ""],
+  ]);
+  assert.equal(C.openCount(C.normalizeLesson(split)), 1);
+  // Notes with code blocks, tables or formula blocks stay in the notes box.
+  for (const notes of ["a\n```\ncode\n```", "| a | b |\n| - | - |", "$$\nx\n$$"]) {
+    const l = C.normalizeLesson({ id: "x1", notes });
+    assert.equal(C.notesToMarks(l), l);
+  }
+  const empty = C.normalizeLesson({ id: "x2" });
+  assert.equal(C.notesToMarks(empty), empty);
+  assert.equal(empty.practice, "");
+  assert.match(C.lessonToMarkdown(C.normalizeLesson({ id: "x3", practice: "练习题" }), 1), /### 课外练习\n\n练习题/);
 });
 
 test("long text is never cut", () => {
@@ -128,4 +151,27 @@ test("positions stay right when lowercasing changes a letter's length", () => {
   const [m] = T.findMentions(text, T.termNames(terms));
   assert.equal(text.slice(m.start, m.end), "注意力");
   assert.equal(T.markAt(text, m.start, m.end, "注意力"), "İ [[注意力]] and Attention");
+});
+
+test("rich boxes show bold, terms and images, and keep code and formulas as written", async () => {
+  const R = await import("../js/rich.mjs");
+  assert.equal(R.lineHtml("在 **Pytorch** 和 *斜体* 里"), "在 <b>Pytorch</b> 和 <i>斜体</i> 里");
+  assert.equal(R.lineHtml("[[可微]] [[LLMs|LLM]]"), '<span class="term" data-md="[[可微]]" contenteditable="false">可微</span> <span class="term" data-md="[[LLMs|LLM]]" contenteditable="false">LLMs</span>');
+  assert.match(R.lineHtml("![截图](uploads/2026-10/x.webp)"), /^<img class="rich-img" data-md="!\[截图\]\(uploads\/2026-10\/x.webp\)" src="uploads\/2026-10\/x.webp"/);
+  assert.equal(R.lineHtml("`a*b*c` 和 $x*y*z$"), "`a*b*c` 和 $x*y*z$");
+  assert.equal(R.lineHtml("<script>&"), "&lt;script&gt;&amp;");
+  assert.equal(R.lineHtml("**[[术语]]**"), '<b><span class="term" data-md="[[术语]]" contenteditable="false">术语</span></b>');
+  assert.equal(R.lineHtml("![x](javascript:alert(1))"), "![x](javascript:alert(1))");
+  assert.equal(R.toHtml("a\n\nb", false), "<div>a</div><div><br></div><div>b</div>");
+  assert.equal(R.toHtml("a\nb", true), "a b");
+});
+
+test("a * with a space before it does not end italics (multiplication stays as written)", async () => {
+  const { renderInline } = await import("../js/markdown.mjs");
+  const R = await import("../js/rich.mjs");
+  const text = "tf *idf = 次数 * 稀有程度";
+  assert.equal(renderInline(text), "tf *idf = 次数 * 稀有程度");
+  assert.equal(R.lineHtml(text), "tf *idf = 次数 * 稀有程度");
+  assert.equal(renderInline("*斜体* 和 a*b*c"), "<em>斜体</em> 和 a<em>b</em>c");
+  assert.equal(R.lineHtml("*斜体*"), "<i>斜体</i>");
 });

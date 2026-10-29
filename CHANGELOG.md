@@ -3,6 +3,19 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.5 — 2026-10-29
+
+- **编辑框所见即所得**：加粗、斜体、术语、截图在编辑时就显示成最后的样子，不再出现 `**`、`[[ ]]`、`![截图](uploads/…)` 这些符号；粘贴的截图直接显示成图片，点一下可以整张选中删除。保存的内容和以前完全一样。
+  **What you see is what you get** while editing: bold, italic, terms and screenshots look as they will on the page instead of showing `**`, `[[ ]]` or `![截图](uploads/…)`; pasted screenshots show as pictures (click one to select and delete it). What is saved is unchanged.
+- **课程改回一条一条记**：每一课和论文的标记一样，选符号、填视频时间、写几个字回车记下；勾「待解决」的进入「问题与解答」。原来写在一个笔记框里的内容，打开编辑时按行拆成一条一条（有代码块、表格的留在「其他笔记」）。
+  **Course lessons go back to one entry at a time**, like a paper's marks: symbol, video time, a few words, Enter; entries ticked "Open" go to **Questions & answers**. Notes written in the single box are split into one entry per line when you open the editor (notes with code blocks or tables stay in **Other notes**).
+- 每一课新增**课外练习**框：作业、自己找的练习、做的过程和结果。
+  Each lesson gets an **Exercises** box: homework, exercises you found, and how you did them.
+- 查看页的**加粗**带一道荧光笔底色，**术语**带底色和实线下划线，换了字体（比如霞鹜文楷）也一眼看得出来；粘贴的截图下面不再显示「截图」两个字。
+  On reading pages, **bold** gets a highlighter stroke and **terms** a tint and solid underline, visible in any font (e.g. LXGW WenKai); pasted screenshots no longer carry a "截图" caption.
+- 修复：`tf *idf = 次数 * 稀有程度` 这种带乘号的文字被错当成斜体、星号消失。
+  Fixed: text with multiplication signs like `tf *idf = a * b` was shown in italics with the asterisks gone.
+
 ## v4.4 — 2026-10-29
 
 - 论文卡片**自动填写**：在「链接」里填 DOI 或 arXiv 编号（或贴论文网址），标题、作者、年份、会议自动填好；只写了标题时按标题查找，从结果里挑一篇。数据来自 Crossref 和 DataCite。

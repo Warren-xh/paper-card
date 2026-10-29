@@ -542,12 +542,26 @@ figure.md-img img:hover { box-shadow: var(--shadow-2); }
 .marks-list li { display: flex; gap: 6px; align-items: flex-start; }
 .marks-list li > .mark-sym, .marks-list li > .row-flag, .marks-list li > .x { margin-top: 5px; }
 .marks-list .input { padding: 5px 8px; font-size: 15px; }
-.marks-list .input:not(.page) { flex: 1; }
+.marks-list .input:not(.page):not(.time-input) { flex: 1; }
 .marks-list .input.page { width: 52px; }
 .marks-list .input.time-input { width: 62px; }
 /* One-line boxes that wrap and grow, so long marks stay fully visible. */
 textarea.input.grow { display: block; resize: none; overflow: hidden; min-height: 38px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--sans); }
 .marks-list textarea.input.grow, .solve-list textarea.input.grow { min-height: 34px; font-size: calc(15px * var(--read-scale)); }
+/* Rich boxes (rich.mjs): the text shows bold, terms and images as they will look. */
+.rich-src { display: none !important; }
+.rich { white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; }
+.rich.textarea { overflow-y: visible; }
+.rich.input.grow { display: block; min-height: 38px; line-height: 1.45; font-family: var(--sans); }
+.marks-list .rich.input.grow, .solve-list .rich.input.grow { min-height: 34px; font-size: calc(15px * var(--read-scale)); }
+.rich.focus { border-color: var(--acc); background: var(--page); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent); }
+.rich.focus + .md-tools { border-color: var(--acc); }
+.rich.is-empty::before { content: attr(data-placeholder); color: var(--pencil); opacity: 0.75; pointer-events: none; float: left; height: 0; width: 100%; }
+.rich img.rich-img { display: block; max-width: min(100%, 520px); max-height: 260px; margin: 6px 0; border-radius: var(--r-xs); border: 1px solid var(--rule); background: var(--img-bg); cursor: default; }
+.rich.grow img.rich-img { display: inline-block; vertical-align: middle; max-height: 120px; margin: 2px 4px; }
+.rich img.rich-img::selection { background: transparent; }
+.rich [data-md] { user-select: all; -webkit-user-select: all; }
+.rich .term { cursor: pointer; }
 .solve-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 10px; }
 .solve-list li:not(.muted) { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--paper); }
 .solve-list .input { padding: 6px 9px; font-size: 15px; }
@@ -767,9 +781,12 @@ a.todo-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); bo
 body.palette-open, body.viewing { overflow: hidden; }
 
 /* ---------- 15. Term library ---------- */
-.term { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--c-term) 80%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 4px; border-radius: 3px; cursor: help; transition: background var(--t); }
-.term:hover, .term:focus-visible { background: color-mix(in srgb, var(--c-term) 14%, transparent); outline: none; }
-.term.auto { text-decoration-color: color-mix(in srgb, var(--c-term) 45%, transparent); }
+.term { color: color-mix(in srgb, var(--c-term) 75%, var(--ink)); background: color-mix(in srgb, var(--c-term) 10%, transparent); text-decoration: underline solid color-mix(in srgb, var(--c-term) 70%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 3px; border-radius: 3px; padding: 0 2px; cursor: help; transition: background var(--t); }
+.term:hover, .term:focus-visible { background: color-mix(in srgb, var(--c-term) 20%, transparent); outline: none; }
+.term.auto { color: inherit; background: none; padding: 0; text-decoration-style: dotted; text-decoration-color: color-mix(in srgb, var(--c-term) 55%, transparent); }
+/* Bold shows with a marker stroke too, so it stands out in fonts without a bold face (e.g. WenKai). */
+strong, .rich b { font-weight: 700; background: linear-gradient(transparent 60%, color-mix(in srgb, var(--marker) 45%, transparent) 60%); border-radius: 2px; }
+.hljs strong, th strong { background: none; }
 .term-pop { position: fixed; z-index: 85; background: var(--page); color: var(--ink); border: 1px solid color-mix(in srgb, var(--c-term) 35%, var(--rule)); border-radius: var(--r-md); box-shadow: inset 4px 0 0 var(--c-term), var(--shadow-2); padding: 12px 14px 10px 18px; font-size: 14.5px; line-height: 1.55; animation: rise 0.14s var(--ease); max-height: min(60vh, 420px); overflow-y: auto; }
 .tp-head { display: grid; gap: 1px; margin-bottom: 6px; }
 .tp-head b { font-family: var(--serif); font-size: 17px; }

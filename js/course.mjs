@@ -1,6 +1,7 @@
 // Courses (课程): notes taken while watching a course. A course holds its
-// lessons; each lesson has notes, uploaded materials (slides, handouts, images),
-// time-stamped marks and a one-liner.
+// lessons; each lesson has time-stamped marks written one at a time (like the
+// marks of a paper card), exercises (课外练习), uploaded materials (slides,
+// handouts, images), a one-liner and optional free notes.
 // One file per course in data/courses/<id>.json; data/courses-index.json lists them.
 // Materials are stored at materials/<course id>/<lesson id>/<file name>.
 import { validDate, todayISO, normalizeTags, validId, makeId, safeUrl, stripMd, sortBy } from "./model.mjs";
@@ -48,7 +49,7 @@ export function newLessonId(random = Math.random) {
 export const newCourseId = (title, date = todayISO(), random = Math.random) => makeId(date, title, random, "course");
 
 export function emptyLesson(fields = {}) {
-  return { id: newLessonId(), title: "", link: "", date: "", done: false, oneLine: "", marks: [], notes: "", files: [], ...fields };
+  return { id: newLessonId(), title: "", link: "", date: "", done: false, oneLine: "", marks: [], practice: "", notes: "", files: [], ...fields };
 }
 
 /* ---------- materials ---------- */
@@ -148,6 +149,7 @@ export function normalizeLesson(raw, seen = new Set()) {
       }))
       .filter((m) => m.text)
       .slice(0, 5000),
+    practice: str(raw.practice),
     notes: str(raw.notes),
     files: (Array.isArray(raw.files) ? raw.files : [])
       .filter((f) => validMaterialPath(f?.path))
@@ -183,10 +185,10 @@ export function normalizeCourse(raw) {
 /* ---------- lessons ---------- */
 export const progress = (c) => ({ done: c.lessons.filter((l) => l.done).length, total: c.lessons.length });
 
-// Marks flagged 待解决 without an answer yet (lessons written before v4.3).
+// Marks flagged 待解决 without an answer yet.
 export const openMarks = (lesson) => lesson.marks.filter((m) => m.solve && !m.answer);
 
-/* ---------- one notes box: time points and open questions inside the notes ---------- */
+/* ---------- questions and times written inside free notes (lessons from v4.3–v4.4) ---------- */
 // "- [ ] …" in the notes is an open question; "- [x] …" a solved one.
 const TASK_LINE = /^(\s*(?:[-*+]|\d+[.)])\s+)\[( |x|X)\]/;
 // Lines inside ``` code blocks are not questions.
@@ -215,18 +217,35 @@ export const openCount = (lesson) => openMarks(lesson).length + openTasks(lesson
 // "[12:05]" in the notes is a time point in the video.
 export const TIME_TOKEN = /\[((?:\d{1,2}:)?\d{1,3}:[0-5]\d)\](?!\()/g;
 
-// Lessons from before v4.3 kept their marks apart from the notes; this puts
-// them into the notes as lines, sorted by time, so there is one place to write.
-export function marksToNotes(lesson) {
-  if (!lesson.marks.length) return lesson;
-  const line = (m) => {
-    const t = m.time ? "[" + m.time + "] " : "";
-    const sym = m.type === "✎" ? "" : m.type + " ";
-    if (m.solve) return "- [" + (m.answer ? "x" : " ") + "] " + t + sym + m.text + (m.answer ? " → " + m.answer : "");
-    return "- " + t + sym + m.text;
-  };
-  const block = "### 边看边记\n\n" + marksByTime(lesson.marks).map(line).join("\n");
-  return { ...lesson, notes: (lesson.notes.trim() ? lesson.notes.replace(/\s+$/, "") + "\n\n" : "") + block + "\n", marks: [] };
+// In v4.3–v4.4 a lesson was one notes box. Each line of it becomes one mark
+// again: "[12:05]" at the start is the time, "? ! ★" the kind, "- [ ]" a
+// question to solve ("- [x] … → answer" a solved one). Notes with code blocks,
+// tables or block formulas are left as they are (they stay in 其他笔记).
+export function notesToMarks(lesson) {
+  const text = lesson.notes;
+  if (!text.trim() || /^\s*(```|~~~|\||\$\$)/m.test(text)) return lesson;
+  const marks = [...lesson.marks];
+  for (let line of text.split("\n")) {
+    line = line.trim();
+    if (!line || /^#{1,6}\s+边看边记$/.test(line)) continue;
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    if (heading) line = "**" + heading[1].trim() + "**";
+    let solve = false, answer = "", time = "", type = "✎";
+    const task = line.match(/^(?:[-*+]|\d+[.)])\s+\[( |x|X)\]\s*(.*)$/);
+    if (task) {
+      solve = true;
+      line = task[2];
+      const split = task[1] !== " " ? line.indexOf(" → ") : -1;
+      if (split > 0) { answer = line.slice(split + 3).trim(); line = line.slice(0, split); }
+      else if (task[1] !== " ") answer = "已解决";
+    } else line = line.replace(/^[-*+]\s+/, "");
+    const t = line.match(/^\[((?:\d{1,2}:)?\d{1,3}:[0-5]\d)\]\s*/);
+    if (t) { time = t[1]; line = line.slice(t[0].length); }
+    const k = line.match(/^([?!★✎])\s+/);
+    if (k) { type = k[1]; line = line.slice(k[0].length); }
+    if (line.trim()) marks.push({ time, type, text: line.trim(), solve, answer });
+  }
+  return { ...lesson, marks, notes: "" };
 }
 
 // The first lesson not watched yet (where to continue).
@@ -255,7 +274,7 @@ export const marksByTime = (marks) =>
 export function plainText(c) {
   return [
     c.title, c.teacher, c.project, c.tags.join(" "), c.goal, stripMd(c.summary),
-    ...c.lessons.map((l) => [l.title, l.oneLine, l.marks.map((m) => m.text + " " + m.answer).join(" "), stripMd(l.notes), l.files.map((f) => materialName(f.path)).join(" ")].join(" ")),
+    ...c.lessons.map((l) => [l.title, l.oneLine, l.marks.map((m) => m.text + " " + m.answer).join(" "), stripMd(l.practice), stripMd(l.notes), l.files.map((f) => materialName(f.path)).join(" ")].join(" ")),
   ]
     .join(" ")
     .replace(/\s+/g, " ")
@@ -372,6 +391,7 @@ export function lessonToMarkdown(l, n) {
   if (meta.length) out.push(meta.join(" ｜ "));
   if (l.oneLine) out.push("> " + l.oneLine);
   if (l.marks.length) out.push(marksByTime(l.marks).map(markLine).join("\n"));
+  if (l.practice.trim()) out.push("### 课外练习\n\n" + l.practice.trim());
   if (l.notes.trim()) out.push(l.notes.trim());
   if (l.files.length) out.push("课件与资料：\n" + l.files.map((f) => "- [" + materialName(f.path) + "](" + f.path + ")").join("\n"));
   return out.join("\n\n");

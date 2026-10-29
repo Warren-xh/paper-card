@@ -14,8 +14,9 @@ import { startEnhancements, highlightCode } from "./enhance.mjs";
 import { createTerms } from "./terms-views.mjs";
 import * as PI from "./paperinfo.mjs";
 import * as R from "./reading.mjs";
+import { attachRich, fieldOf, setImageResolver } from "./rich.mjs";
 
-export const VERSION = "4.4";
+export const VERSION = "4.5";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -103,11 +104,14 @@ const growWatch = new ResizeObserver((entries) => {
     if (+target.dataset.growWidth !== target.offsetWidth) { target.dataset.growWidth = target.offsetWidth; growBox(target); }
   }
 });
+// Note boxes that show bold, italic, terms and images as they look (see rich.mjs).
+const RICH = "#markText, #stepText, textarea[data-k=text], textarea[data-solve], textarea.textarea:not(.one):not(.short):not(.code):not(#recallText)";
 new MutationObserver((records) => {
   for (const r of records) for (const n of r.addedNodes) {
     if (n.nodeType !== 1) continue;
+    for (const t of n.matches(RICH) ? [n] : n.querySelectorAll(RICH)) attachRich(t);
     // Size new boxes right away (layout is ready here); the observer handles later width changes.
-    for (const t of n.matches("textarea.grow") ? [n] : n.querySelectorAll("textarea.grow")) { growBox(t); growWatch.observe(t); }
+    for (const t of n.matches("textarea.grow:not(.rich-src)") ? [n] : n.querySelectorAll("textarea.grow:not(.rich-src)")) { growBox(t); growWatch.observe(t); }
   }
 }).observe(document.body, { childList: true, subtree: true });
 document.addEventListener("input", (e) => {
@@ -132,7 +136,12 @@ const mdTools = (name) =>
 
 // Images are resized in the browser and kept in `images` (path → data URL) until
 // the editor saves; a Markdown image line is put where the cursor is.
+// Images pasted in this editor show in the boxes before they are uploaded.
+let editorImages = {};
+setImageResolver((src) => editorImages[src] || (store.get("pc-imgcache") || {})[src] || "");
 function enableImages(form, images) {
+  editorImages = images;
+  form.dataset.images = "1";
   const pick = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true, hidden: true });
   form.append(pick);
   let target = null;
@@ -172,20 +181,24 @@ function enableImages(form, images) {
     pick.value = "";
     if (target && files.length) insert(target, files);
   };
+  // In a rich box the event comes from inside it; the field is its textarea.
+  const field = (e) => { const f = fieldOf(e.target); return f?.matches?.(IMAGE_FIELDS) ? f : null; };
   form.addEventListener("paste", (e) => {
-    if (!e.target.matches?.(IMAGE_FIELDS)) return;
+    const area = field(e);
+    if (!area) return;
     const files = onlyImages([...(e.clipboardData?.items || [])].filter((i) => i.kind === "file").map((i) => i.getAsFile()));
     if (!files.length) return;
     e.preventDefault();
-    insert(e.target, files);
+    insert(area, files);
   });
-  form.addEventListener("dragover", (e) => { if (e.target.matches?.(IMAGE_FIELDS) && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
+  form.addEventListener("dragover", (e) => { if (field(e) && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
   form.addEventListener("drop", (e) => {
-    if (!e.target.matches?.(IMAGE_FIELDS)) return;
+    const area = field(e);
+    if (!area) return;
     const files = onlyImages(e.dataTransfer.files);
     if (!files.length) return;
     e.preventDefault();
-    insert(e.target, files);
+    insert(area, files);
   });
 }
 // Images still referenced anywhere in what is being saved.

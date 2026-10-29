@@ -14,6 +14,17 @@ export function setLang(lang) {
 
 /* ---------- exact strings ---------- */
 const EXACT = {
+  // v4.5: course lessons written one entry at a time, exercises.
+  "原来的笔记已按行拆成一条一条的记录，检查一下，保存后生效。": "Your earlier notes were split into one entry per line. Check them; this takes effect when you save.",
+  "一条一条记：选一个符号，填上视频时间（可以不填），写几个字，回车就记下一条。时间会沿用上一条，翻到哪里改哪里。觉得没弄懂就勾上「待解决」，它会出现在下面的「问题与解答」里。": "One entry at a time: pick a symbol, add the video time (optional), write a few words and press Enter. The time carries over from the last entry; change it as you go. Tick “Open” for anything you didn't get, and it appears under “Questions & answers” below.",
+  "记录内容": "Entry", "勾了「待解决」的记录列在这里。弄懂了就写下答案；还没弄懂的留空。": "Entries ticked “Open” are listed here. Write the answer once you get it; leave it blank until then.",
+  "课外练习": "Exercises", "这一课布置的作业、自己找的练习题，以及做的过程和结果。": "Homework for this lesson, exercises you found yourself, and how you did them.",
+  "练习的题目、做法和结果": "The exercise, how you did it and the result", "其他笔记": "Other notes",
+  "原来的笔记里有代码块、表格或公式块，没有拆成一条一条，先放在这里。": "Your earlier notes have code blocks, tables or formula blocks, so they were not split into entries; they are kept here.",
+  "不适合一条一条记的内容，比如代码、表格。可以不填。": "Anything that doesn't fit as entries, such as code or tables. Optional.",
+  "视频时间写成 分:秒，比如 12:05，或者留空。": "Write the video time as min:sec, such as 12:05, or leave it blank.",
+  "待解决：勾上后出现在「问题与解答」里": "Open: ticked entries appear under “Questions & answers”", "还没有勾「待解决」的记录。": "No entries ticked “Open” yet.",
+  "有练习": "Has exercises", "点时间，视频会跳到那一刻。": "Click a time to jump the video there.",
   // shell
   "文献卡片": "Paper Cards", "实操记录": "Practice Log", "思维导图": "Mind Maps",
   "论文阅读卡片：读一篇，记一张；回头看，一眼想起。": "Paper cards: read one, write one; look back and remember at a glance.",
@@ -318,6 +329,9 @@ const plural = (n, one, many) => `${n} ${+n === 1 ? one : many}`;
 // user's own words); rules call T() on the parts that are interface text.
 const T = (c) => (c && isCJK.test(c) ? tr(c) ?? c : c);
 const TEMPLATES = [
+  [/^(\d+) 条都解决了。$/, (n) => `All ${n} solved.`],
+  [/^(\d+) 条记录$/, (n) => plural(n, "entry", "entries")],
+  [/^(\d+) 条记录 · 待解决 (\d+)$/, (n, o) => `${plural(n, "entry", "entries")} · ${o} open`],
   [/^(\d{4}) 年 (\d{1,2}) 月 (\d{1,2}) 日$/, (y, m, d) => date(y, m, d)],
   [/^(\d{4}) 年 (\d{1,2}) 月 (\d{1,2}) 日 阅读$/, (y, m, d) => "Read " + date(y, m, d)],
   [/^(\d{4}) 年 (\d{1,2}) 月$/, (y, m) => `${MONTHS[+m - 1]} ${y}`],
@@ -445,8 +459,8 @@ export function tr(text) {
 
 /* ---------- live translation of the page ---------- */
 // Containers whose text is the user's own writing.
-const SKIP = ".md, pre, code, textarea, .file-pre, .katex, [data-no-tr]";
-const ATTRS = ["placeholder", "title", "aria-label"];
+const SKIP = ".md, pre, code, textarea, .rich, .file-pre, .katex, [data-no-tr]";
+const ATTRS = ["placeholder", "title", "aria-label", "data-placeholder"];
 
 function translateText(node) {
   // Some places need a shorter English word than the usual one (data-en="…").
@@ -460,7 +474,8 @@ function translateText(node) {
 }
 
 function translateElement(el) {
-  if (el.closest?.(SKIP)) return;
+  // A text box's own placeholder and label are interface text; what is inside is not.
+  if (el.parentElement?.closest?.(SKIP)) return;
   for (const a of ATTRS) {
     const v = el.getAttribute?.(a);
     if (v && isCJK.test(v)) {

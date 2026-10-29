@@ -17,7 +17,7 @@ export function buildEntries({ cards = [], logs = [], courses = [], courseFiles 
       kind: "lesson",
       title: l.title || "第 " + (i + 1) + " 课",
       sub: (c.title || "") + " · 第 " + (i + 1) + " 课",
-      text: [l.oneLine, l.notes, l.marks.map((m) => m.text + " " + m.answer).join(" "), l.files.map((f) => f.path.split("/").pop()).join(" ")].join(" "),
+      text: [l.oneLine, l.practice, l.notes, l.marks.map((m) => m.text + " " + m.answer).join(" "), l.files.map((f) => f.path.split("/").pop()).join(" ")].join(" "),
       href: "#/course/" + c.id + "/l/" + l.id,
       at: c.updatedAt || "",
     }));
