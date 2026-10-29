@@ -17,9 +17,228 @@
    "link": "",
    "date": "2026-10-28",
    "done": true,
-   "oneLine": "1. Workflow 与 Agent 的区别\n\nWorkflow 是预先定义好的固定流程，LLM 只是其中的环节，执行路径由人写死，结果可预测、易调试。Agent 由 LLM 动态决定下一步做什么、调用哪些工具、何时停止\n\n2. 危机推文例子\n推文：\"我们在梅努斯遭遇了风暴，在市政府这里需要一些食物\nworkflow: 按固定步骤处理，先分类再抽取信息，最后结构化记录推送给救援方\nagent:给定目标核实并响应，LLM 自主行动，搜索相关推文交叉验证，查询信息，决定是否上报\n\n3. ReAct 相比 CoT 缓解了什么\nCoT 只依靠模型内部知识逐步推理，是封闭的推理过程，容易产生幻觉\nReAct 将推理和行动交替进行，用外部工具获取真实信息来支撑和修正推理",
-   "marks": [],
-   "notes": "Agent = planning + Memory -> LLM core -> Tools -> Agent actions\n思路是可以用现成的大模型，靠提示词，工具调用，检索，多步推理来完成任务，而不是训练\nReact Reason with act 分别代入各类的回答，得到一个最合理的\n[[Self-consistency|自洽性]]：利用 cot 来生成 reasoning path，产生连续合理的回答集\nReflexion： agents 通过自然语言得到反馈\n\nMemory：分为 Episodic memory  store experience 情景记忆\nSemanic memory Store knowledge  语义记忆\nProcedural memory：stores skills 程序性记忆\n\ntoolFormer: LLm can teach themselves to use tools\nZero-shot: 零样本，模型在没有看过任何该任务的实例，没有针对它训练的情况下直接完成任务\nFine-tuning 微调 用大量标注数据真正训练模型参数\nhallucination 幻觉： 一本正经地生成错误或无中生有的内容，大模型在生成看起来合理的文本，并不检查内容是否真实\n\nCompound AI system\nThree layer: The system-> The data -> The evals\n\nworkflow vs Agents：\nworkflow： code fixes the steps\nagent: The LLM decides the steps\n\nRAG Retrieval Augmented Generation 检索增强生成 先查资料，再让大模型生成\nRetirever, web , Reader\n\n\nTool Use: Anatomy of a call\nSelect-> Arguments-> Validate -> Execute 模型调用外部方法的顺序\n\nMCP(anthropic推出的...): Model Context Protocol 模型上下文协议，给 LLM 与外部工具同意协议，降低开发门槛\nChat interface , IDES and code editors and other AI application -> MCP as a standardized protocol-> Data and file system(SQL), Development tools, Productivity tool (MAP)\n每种服务写一个 MCPserver，把自己的能力包装成工具， MCPclient 就可以调用这些工具\n\nKey challenges:  Reliability, Training, Long-horizon, Safety, Evaluation\n\nConsistency连贯性: produce the same outcome when give the same task twice?\nRobustness 鲁棒性: How do agents respond to small, realistic shifts in prompts, tools, etcs（存在现实中常见的错误是模型的性能，如错别字，不同语言，参数顺序，环境变化）\nPredictable: When agents fail, Do they fail in legible可读的,recoverable 可恢复的 way or unpredictable 可预测的(Agent 失败时的情况，ai 知道出现的问题，并停下来问，这种错误是可读可恢复的。 如果不报错，给出一个错误结果标注已完成，没有规律的报错就是不可预测的，这种就是最危险的自信的失败，也就是幻觉)\n\nMisalignment 失调未对齐，AI的目标与人类真实意图不一致，偏离了人类的本意\nSycophancy 掐媚 为了取悦用户 迎合用户的偏好，牺牲了事实的准确性\n\n Multi-agent Collusion 多智能体共谋: 多个 Agent 组成一个团队协同工作，共谋造成损\n",
+   "oneLine": "",
+   "marks": [
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Agent = planning + Memory -> LLM core -> Tools -> Agent actions",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "思路是可以用现成的大模型，靠提示词，工具调用，检索，多步推理来完成任务，而不是训练",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "React Reason with act 分别代入各类的回答，得到一个最合理的",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "[[Self-consistency|自洽性]]：利用 cot 来生成 reasoning path，产生连续合理的回答集",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Reflexion： agents 通过自然语言得到反馈",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Memory：分为 Episodic memory  store experience 情景记忆",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Semanic memory Store knowledge  语义记忆",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Procedural memory：stores skills 程序性记忆",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "toolFormer: LLm can teach themselves to use tools",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Zero-shot: 零样本，模型在没有看过任何该任务的实例，没有针对它训练的情况下直接完成任务",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Fine-tuning 微调 用大量标注数据真正训练模型参数",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "hallucination 幻觉： 一本正经地生成错误或无中生有的内容，大模型在生成看起来合理的文本，并不检查内容是否真实",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Compound AI system",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Three layer: The system-> The data -> The evals",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "workflow vs Agents：",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "workflow： code fixes the steps",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "agent: The LLM decides the steps",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "RAG Retrieval Augmented Generation 检索增强生成 先查资料，再让大模型生成",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Retirever, web , Reader",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Tool Use: Anatomy of a call",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Select-> Arguments-> Validate -> Execute 模型调用外部方法的顺序",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "MCP(anthropic推出的...): Model Context Protocol 模型上下文协议，给 LLM 与外部工具同意协议，降低开发门槛",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Chat interface , IDES and code editors and other AI application -> MCP as a standardized protocol-> Data and file system(SQL), Development tools, Productivity tool (MAP)",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "每种服务写一个 MCPserver，把自己的能力包装成工具， MCPclient 就可以调用这些工具",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Key challenges:  Reliability, Training, Long-horizon, Safety, Evaluation",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Consistency连贯性: produce the same outcome when give the same task twice?",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Robustness 鲁棒性: How do agents respond to small, realistic shifts in prompts, tools, etcs（存在现实中常见的错误是模型的性能，如错别字，不同语言，参数顺序，环境变化）",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Predictable: When agents fail, Do they fail in legible可读的,recoverable 可恢复的 way or unpredictable 可预测的(Agent 失败时的情况，ai 知道出现的问题，并停下来问，这种错误是可读可恢复的。 如果不报错，给出一个错误结果标注已完成，没有规律的报错就是不可预测的，这种就是最危险的自信的失败，也就是幻觉)",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Misalignment 失调未对齐，AI的目标与人类真实意图不一致，偏离了人类的本意",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Sycophancy 掐媚 为了取悦用户 迎合用户的偏好，牺牲了事实的准确性",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Multi-agent Collusion 多智能体共谋: 多个 Agent 组成一个团队协同工作，共谋造成损",
+     "solve": false,
+     "answer": ""
+    }
+   ],
+   "practice": "",
+   "notes": "1. Workflow 与 Agent 的区别\n\nWorkflow 是预先定义好的固定流程，LLM 只是其中的环节，执行路径由人写死，结果可预测、易调试。Agent 由 LLM 动态决定下一步做什么、调用哪些工具、何时停止\n\n2. 危机推文例子\n推文：\"我们在梅努斯遭遇了风暴，在市政府这里需要一些食物\nworkflow: 按固定步骤处理，先分类再抽取信息，最后结构化记录推送给救援方\nagent:给定目标核实并响应，LLM 自主行动，搜索相关推文交叉验证，查询信息，决定是否上报\n\n3. ReAct 相比 CoT 缓解了什么\nCoT 只依靠模型内部知识逐步推理，是封闭的推理过程，容易产生幻觉\nReAct 将推理和行动交替进行，用外部工具获取真实信息来支撑和修正推理",
    "files": []
   },
   {
@@ -30,10 +249,11 @@
    "done": false,
    "oneLine": "",
    "marks": [],
+   "practice": "",
    "notes": "",
    "files": []
   }
  ],
  "createdAt": "2026-10-27T17:59:36.874Z",
- "updatedAt": "2026-10-29T17:04:45.077Z"
+ "updatedAt": "2026-10-29T17:06:07.609Z"
 }
