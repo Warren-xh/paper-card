@@ -1,10 +1,11 @@
 // Pages for practice logs (实操记录). Shared helpers come from app.mjs through `ctx`.
 import * as L from "./lab.mjs";
 import { kindIcon } from "./palette.mjs";
+import * as G from "./ghlinks.mjs";
 import * as M from "./model.mjs";
 
 export function createLab(ctx) {
-  const { state, $, $$, h, renderMarkdown, renderInline, toast, confirmDialog, copyText, typesetMath, store } = ctx;
+  const { state, $, $$, h, renderMarkdown, renderInline, toast, dialog, confirmDialog, copyText, typesetMath, store } = ctx;
   const main = $("#main");
   state.logs = L.emptyIndex();
   state.logCache = new Map();
@@ -63,6 +64,7 @@ export function createLab(ctx) {
   const sym = (type) => `<span class="mark-sym s${L.STEPS.findIndex((x) => x.type === type)}" title="${L.stepLabel(type)}">${type}</span>`;
   const md = (images) => (text) => renderMarkdown(text, { shiftHeadings: 2, resolveImage: (src) => images?.[src] || "" });
   const day = (iso) => { const [y, m, d] = iso.split("-").map(Number); return { y, m, d }; };
+  const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
   const paperOf = (id) => state.index.cards.find((x) => x.id === id);
   // Uploaded code files are served by the site at their repository path.
   const fileUrl = (path) => path.split("/").map(encodeURIComponent).join("/");
@@ -162,7 +164,7 @@ export function createLab(ctx) {
     if (x.open) facts.push(`<span class="todo-tag">待解决 ${x.open}</span>`);
     if (x.tags.length) facts.push(`<span class="tags">${x.tags.map((t) => "#" + h(t)).join(" ")}</span>`);
     return `<a class="entry-row" href="#/lab/e/${h(x.id)}">
-      <div class="d"><b>${d ? d.d : "–"}</b><small>${d ? d.m + " 月" : ""}</small></div>
+      <div class="d"><b>${d ? d.d : "–"}</b><small>${d ? WEEKDAYS[new Date(d.y, d.m - 1, d.d).getDay()] : ""}</small></div>
       <div><h3>${x.title ? h(x.title) : '<span class="untitled">未写标题</span>'}</h3>
         ${x.conclusion ? `<p>${h(x.conclusion)}</p>` : ""}
         <div class="facts">${facts.join("")}</div></div>
@@ -187,6 +189,7 @@ export function createLab(ctx) {
       sec("问题与解决", fixes) +
       sec("关键代码 / 命令", l.code.trim() ? `<div class="md">${m(codeMd(l.code))}</div>` : "") +
       filesHtml(l) +
+      githubHtml(l) +
       sec("结果", text(l.results)) +
       sec("下次要做", text(l.next)) +
       sec("相关论文", papers.length ? `<ul class="link-list">${papers.map((p) => `<li><a href="#/c/${h(p.id)}">${h(p.title || p.id)}</a>${p.oneLine ? `<p>${h(p.oneLine)}</p>` : ""}</li>`).join("")}</ul>` : "") +
@@ -204,6 +207,55 @@ export function createLab(ctx) {
           ${L.isTextFile(f.path) ? `<button type="button" class="btn quiet small" data-view-file="${i}" aria-expanded="false">查看</button>` : ""}
           <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(f.path.split("/").pop())}">下载</a></div>
         <pre class="file-pre" hidden><code></code></pre></li>`).join("")}</ul></section>`;
+  }
+
+  /* ---------- GitHub commits, pull requests and comparisons ---------- */
+  const ghCache = new Map();
+  async function ghData(g) {
+    const key = g.url;
+    if (ghCache.has(key)) return ghCache.get(key);
+    const stored = store.get("pc-gh:" + key, ctx.session);
+    if (stored) return stored;
+    const answers = await Promise.all(G.apiPaths(g).map((p) => state.gh.publicApi(p)));
+    const data = G.summarize(g, answers);
+    ghCache.set(key, data);
+    store.set("pc-gh:" + key, data, ctx.session);
+    return data;
+  }
+  const KIND_NAMES = { commit: "提交", pull: "PR", compare: "对比", repo: "仓库" };
+  function githubHtml(l) {
+    if (!l.github.length) return "";
+    return `<section class="section gh-section"><div class="sec-head"><h2>代码改动</h2><span class="muted small">${l.github.length} 个 GitHub 链接</span></div>
+      ${l.github.map((u, i) => { const g = G.parseGitHubLink(u); return `<article class="gh-card" data-gh="${i}">
+        <header class="gh-head"><span class="gh-kind k-${g.kind}">${KIND_NAMES[g.kind]}</span><a href="${h(g.url)}" target="_blank" rel="noopener">${h(G.linkLabel(g))}</a></header>
+        <div class="gh-body"><p class="muted small">正在读取…</p></div></article>`; }).join("")}</section>`;
+  }
+  const when = (iso) => (iso ? iso.slice(0, 10) : "");
+  function ghBodyHtml(g, d) {
+    const bar = (a, del) => `<span class="gh-bar">${G.changeBar(a, del).map((c) => `<i class="${c}"></i>`).join("")}</span>`;
+    const meta = [d.who && h(d.who), when(d.when), d.state === "merged" ? "已合并" : d.state === "open" ? "未合并" : d.state === "closed" ? "已关闭" : "", d.language && h(d.language), d.stars != null ? "★ " + d.stars : ""].filter(Boolean).join(" · ");
+    const list = d.commits?.length ? `<ul class="gh-commits">${d.commits.slice(0, 12).map((c) => `<li><a href="https://github.com/${h(g.owner)}/${h(g.repo)}/commit/${h(c.sha)}" target="_blank" rel="noopener"><code>${G.shortSha(c.sha)}</code></a> ${h(c.title)}${c.when ? ` <span class="muted small">${when(c.when)}</span>` : ""}</li>`).join("")}</ul>` : "";
+    const fileHtml = (f) => {
+      const diff = f.patch == null ? null : G.diffLines(f.patch);
+      return `<details class="gh-file"><summary><span class="gh-status s-${h(f.status)}">${h({ added: "新增", removed: "删除", renamed: "改名", modified: "修改" }[f.status] || f.status)}</span><span class="fname" title="${h(f.name)}">${f.previous ? h(f.previous) + " → " : ""}${h(f.name)}</span><span class="gh-num"><b class="add">+${f.additions}</b> <b class="del">−${f.deletions}</b></span>${bar(f.additions, f.deletions)}</summary>
+        ${diff ? `<pre class="gh-diff">${diff.lines.map((x) => `<span class="dl ${x.type}">${h(x.text) || " "}</span>`).join("")}</pre>${diff.more ? `<p class="muted small">后面还有 ${diff.more} 行，<a href="${h(g.url)}" target="_blank" rel="noopener">去 GitHub 看完整改动</a>。</p>` : ""}` : `<p class="muted small">二进制文件或改动太大，<a href="${h(g.url)}" target="_blank" rel="noopener">去 GitHub 看</a>。</p>`}</details>`;
+    };
+    return `<p class="gh-title"><b>${h(d.title)}</b></p>
+      ${d.body ? `<p class="gh-desc">${h(d.body)}</p>` : ""}
+      ${meta ? `<p class="gh-meta">${meta}</p>` : ""}
+      ${d.files.length ? `<p class="gh-stats">${d.files.length} 个文件 · <b class="add">+${d.additions}</b> <b class="del">−${d.deletions}</b> ${bar(d.additions, d.deletions)}</p><div class="gh-files">${d.files.map(fileHtml).join("")}</div>` : ""}
+      ${list}`;
+  }
+  async function bindGitHub(root, l) {
+    for (const card of $$("[data-gh]", root)) {
+      const g = G.parseGitHubLink(l.github[+card.dataset.gh]);
+      const body = $(".gh-body", card);
+      try {
+        body.innerHTML = ghBodyHtml(g, await ghData(g));
+      } catch (error) {
+        body.innerHTML = `<p class="muted small">${h(error.message)} <a href="${h(g.url)}" target="_blank" rel="noopener">在 GitHub 上打开</a></p>`;
+      }
+    }
   }
 
   // "查看" loads a text file on demand and shows it under its row.
@@ -241,9 +293,9 @@ export function createLab(ctx) {
     if (l.project) meta.push(`<span>项目：${h(l.project)}</span>`);
     if (l.tags.length) meta.push(`<span>${l.tags.map((t) => "#" + h(t)).join(" ")}</span>`);
     const cite = [l.env && h(l.env), l.link && `<a href="${h(M.paperHref(l.link))}" target="_blank" rel="noopener">代码链接</a>`].filter(Boolean).join(" · ");
-    return `<div class="meta-line">${meta.join("")}</div>
+    return `<header class="card-head"><div class="meta-line">${meta.join("")}</div>
       <h1 class="card-title">${l.title ? h(l.title) : '<span class="untitled">未写标题</span>'}</h1>
-      ${cite ? `<p class="cite">${cite}</p>` : ""}
+      ${cite ? `<p class="cite">${cite}</p>` : ""}</header>
       ${l.goal ? `<p class="why"><b>目标：</b>${h(l.goal)}</p>` : ""}`;
   }
 
@@ -263,6 +315,7 @@ export function createLab(ctx) {
       <article class="sheet log-page">${headHtml(l)}${bodyHtml(l)}</article>`;
     $("#copyLog").onclick = () => copyText(L.logToMarkdown(l, new Map(state.index.cards.map((x) => [x.id, x.title]))));
     bindFiles($(".log-page"), l);
+    bindGitHub($(".log-page"), l);
     typesetMath(main);
   }
 
@@ -328,6 +381,10 @@ export function createLab(ctx) {
           <ul class="file-edit" id="fileList"></ul>
           <p class="hint small">文件马上存进 GitHub 仓库的 code/ 文件夹，之后在记录页可以查看和下载；同名文件再传会覆盖。仓库是公开的，会自动跳过 .env、密钥文件、node_modules、.git 等。单个文件最大 25 MB，一次最多 200 个文件、共 100 MB。</p>
           <input type="file" id="filePick" multiple hidden><input type="file" id="folderPick" webkitdirectory multiple hidden></div>
+        <div class="pdf-field"><label class="label" for="ghInput">GitHub 提交</label>
+          <div class="input-btn"><input id="ghInput" placeholder="提交、PR、对比或仓库的网址" autocomplete="off"><button type="button" class="btn small" id="ghAdd">关联</button></div>
+          <ul class="gh-chosen" id="ghList"></ul>
+          <p class="hint small">记录页会显示每次提交改了哪些文件、改了哪几行。贴仓库地址可以从最近的提交里挑。公开仓库直接可用。</p></div>
         <datalist id="lprojList">${projects.map((p) => `<option value="${h(p)}">`).join("")}</datalist>
         <datalist id="ltagList">${allTags.map((t) => `<option value="${h(t)}">`).join("")}</datalist>
 
@@ -562,6 +619,60 @@ export function createLab(ctx) {
       changed();
     });
 
+    // GitHub links: a repository opens a list of its recent commits to pick from.
+    let github = [...log.github];
+    const paintGitHub = () => {
+      $("#ghList").innerHTML = github.map((u) => { const g = G.parseGitHubLink(u); return `<li><span class="gh-kind k-${g.kind}">${KIND_NAMES[g.kind]}</span><a href="${h(g.url)}" target="_blank" rel="noopener" class="fname">${h(G.linkLabel(g))}</a><button type="button" class="unlink" data-ungh="${h(u)}" aria-label="移除">×</button></li>`; }).join("");
+    };
+    paintGitHub();
+    const addLinks = (urls) => {
+      const before = github.length;
+      github = G.normalizeLinks([...github, ...urls]);
+      paintGitHub();
+      if (github.length !== before) changed();
+    };
+    const pickCommits = async (g) => {
+      const list = await state.gh.publicApi(`/repos/${g.owner}/${g.repo}/commits?per_page=20`);
+      return dialog(`<form method="dialog" class="gh-pick">
+        <h2>选择提交</h2><p class="small">${h(g.owner + "/" + g.repo)} 最近的提交。勾上要关联的，也可以只关联整个仓库。</p>
+        <ul class="scan-list">${list.map((c, i) => `<li><label><input type="checkbox" data-i="${i}"><span><b>${h((c.commit?.message || "").split("\n")[0])}</b><small><code>${G.shortSha(c.sha)}</code> · ${h(c.commit?.author?.name || "")} · ${when(c.commit?.author?.date)}</small></span></label></li>`).join("")}</ul>
+        <label class="rs-check"><input type="checkbox" id="ghWhole"> 也关联整个仓库</label>
+        <div class="dialog-actions"><button type="button" class="btn quiet" data-v="0">取消</button><button type="submit" class="btn primary">关联</button></div></form>`, (el, close) => {
+        $("[data-v]", el).onclick = () => close(null);
+        $("form", el).onsubmit = (e) => {
+          e.preventDefault();
+          const picked = $$("[data-i]", el).filter((c) => c.checked).map((c) => `https://github.com/${g.owner}/${g.repo}/commit/${list[+c.dataset.i].sha}`);
+          close($("#ghWhole", el).checked ? [g.url, ...picked] : picked);
+        };
+      });
+    };
+    $("#ghAdd").onclick = async () => {
+      const input = $("#ghInput");
+      const g = G.parseGitHubLink(input.value);
+      if (!g) { toast("认不出这个地址：请贴 GitHub 上提交、PR、对比或仓库的网址。", "error"); return input.focus(); }
+      if (g.kind !== "repo") { addLinks([g.url]); input.value = ""; return; }
+      const btn = $("#ghAdd");
+      btn.disabled = true;
+      try {
+        const picked = await pickCommits(g);
+        if (picked?.length) { addLinks(picked); input.value = ""; }
+      } catch (error) {
+        toast(error.message + " 已直接关联整个仓库。", "error");
+        addLinks([g.url]);
+        input.value = "";
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $("#ghInput").addEventListener("keydown", (e) => { if (ctx.plainEnter(e)) { e.preventDefault(); $("#ghAdd").click(); } });
+    $("#ghList").addEventListener("click", (e) => {
+      const rm = e.target.closest("[data-ungh]");
+      if (!rm) return;
+      github = github.filter((u) => u !== rm.dataset.ungh);
+      paintGitHub();
+      changed();
+    });
+
     const collect = () =>
       L.normalizeLog({
         ...log,
@@ -582,6 +693,7 @@ export function createLab(ctx) {
         next: form.next.value,
         papers,
         files,
+        github,
         notes: form.notes.value,
       });
 
@@ -626,6 +738,7 @@ export function createLab(ctx) {
         const l = collect();
         box.innerHTML = headHtml(l) + bodyHtml(l, images);
         bindFiles(box, l);
+        bindGitHub(box, l);
         typesetMath(box);
       }
     }));

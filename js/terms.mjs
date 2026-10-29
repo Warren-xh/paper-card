@@ -105,6 +105,90 @@ export function usages(entries, t) {
   });
 }
 
+/* ---------- finding terms that are written but not marked ---------- */
+const WORD = /[A-Za-z0-9_]/;
+const ACRONYM = /^[A-Z0-9][A-Z0-9-]{1,5}$/;
+
+// Every name a term can be written as (term, Chinese, English), longest first.
+export function termNames(terms) {
+  const seen = new Set();
+  const out = [];
+  for (const t of terms)
+    for (const raw of [t.term, t.zh, t.en]) {
+      const name = one(raw);
+      const low = name.toLowerCase();
+      if ([...name].length < 2 || seen.has(low)) continue;
+      seen.add(low);
+      // Latin names must stand alone as words; short acronyms (LLM, RNN) must match their case.
+      out.push({ name, low, entry: t, latin: /^[\x20-\x7e]+$/.test(name), exact: ACRONYM.test(name) });
+    }
+  return out.sort((a, b) => b.low.length - a.low.length);
+}
+
+// Where names are mentioned in a text: non-overlapping, longer names first.
+// A Latin name may take a plural "s" ("Transformers" mentions "Transformer").
+export function findMentions(text, names) {
+  const src = String(text || "");
+  // Lowercase letter by letter, keeping any letter whose lowercase is longer
+  // (like "İ"), so positions in `low` match positions in `src`.
+  const low = [...src].map((c) => { const l = c.toLowerCase(); return l.length === c.length ? l : c; }).join("");
+  const taken = new Uint8Array(src.length);
+  const out = [];
+  for (const n of names) {
+    const hay = n.exact ? src : low;
+    const needle = n.exact ? n.name : n.low;
+    for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + 1)) {
+      let end = at + needle.length;
+      if (n.latin) {
+        if (at > 0 && WORD.test(src[at - 1])) continue;
+        if (/s/i.test(src[end] || "") && !WORD.test(src[end + 1] || "")) end++;
+        if (WORD.test(src[end] || "")) continue;
+      }
+      if (taken.subarray(at, end).some(Boolean)) continue;
+      taken.fill(1, at, end);
+      out.push({ start: at, end, shown: src.slice(at, end), entry: n.entry });
+    }
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+// The text with everything that must not be touched blanked out (same length):
+// code, formulas, links, images, web addresses and terms already marked.
+export function maskMarkdown(text) {
+  const blank = (m) => m.replace(/[^\n]/g, " ");
+  return String(text || "")
+    .replace(/(^|\n)(```|~~~)[\s\S]*?(\n\2[^\n]*|$)/g, blank)
+    .replace(/`[^`\n]*`/g, blank)
+    .replace(/\$\$[\s\S]*?\$\$/g, blank)
+    .replace(/\$[^$\n]+\$/g, blank)
+    .replace(TERM_RE, blank)
+    .replace(/!?\[[^\]\n]*\]\([^)\n]*\)/g, blank)
+    .replace(/https?:\/\/[^\s<>()（）]+/g, blank);
+}
+
+// Library terms mentioned in some texts (the boxes of one editor) but not
+// marked anywhere in them: the first mention of each, in reading order.
+export function unmarkedTerms(texts, terms) {
+  const lib = { terms };
+  const marked = new Set(texts.flatMap((t) => termsIn(t)).map((m) => findTerm(lib, m.name)).filter(Boolean).map((t) => termKey(t.term)));
+  const names = termNames(terms).filter((n) => !marked.has(termKey(n.entry.term)));
+  const first = new Map();
+  texts.forEach((text, field) => {
+    for (const m of findMentions(maskMarkdown(text), names)) {
+      const k = termKey(m.entry.term);
+      if (first.has(k)) continue;
+      const src = String(text);
+      const before = src.slice(Math.max(0, m.start - 14), m.start).replace(/\s+/g, " ");
+      const after = src.slice(m.end, m.end + 14).replace(/\s+/g, " ");
+      first.set(k, { ...m, shown: src.slice(m.start, m.end), field, context: { before: (m.start > 14 ? "…" : "") + before, after: after + (m.end + 14 < src.length ? "…" : "") } });
+    }
+  });
+  return [...first.values()].sort((a, b) => a.field - b.field || a.start - b.start);
+}
+
+// Marks the words at [start, end) as the given term.
+export const markAt = (text, start, end, name) => text.slice(0, start) + markTerm(text.slice(start, end), name) + text.slice(end);
+
 export function libraryToMarkdown(lib) {
   return "# 词库\n\n" + lib.terms.map((t) =>
     "## " + t.term + "\n\n" + [t.zh && "- 中文：" + t.zh, t.en && "- English：" + t.en].filter(Boolean).join("\n") + (t.def ? "\n\n" + t.def : "")).join("\n\n") + "\n";

@@ -95,6 +95,34 @@ export class GitHubClient {
     return info;
   }
 
+  // Reads another repository from GitHub itself (also in the local preview):
+  // with the token when it has access, without it otherwise (public repos).
+  async publicApi(path) {
+    const call = async (auth) => {
+      const headers = { Accept: "application/vnd.github+json" };
+      if (auth) {
+        headers.Authorization = "Bearer " + this.#token;
+        headers["X-GitHub-Api-Version"] = "2022-11-28";
+      }
+      try {
+        return await this.#fetch("https://api.github.com" + path, { headers, cache: "no-store", signal: AbortSignal.timeout(20000) });
+      } catch {
+        throw new GitHubError("无法连接 GitHub。", 0);
+      }
+    };
+    let res = this.#token ? await call(true) : null;
+    if (!res || [401, 403, 404].includes(res.status)) res = await call(false);
+    const data = await res.json().catch(() => null);
+    if (!res.ok)
+      throw new GitHubError(
+        res.status === 404 ? "找不到：仓库可能是私有的，或者地址写错了。"
+          : res.status === 403 || res.status === 429 ? "GitHub 暂时不让读取（每小时的次数用完了），稍后再试。"
+          : "GitHub 请求失败（" + res.status + "）。",
+        res.status,
+      );
+    return data;
+  }
+
   // When each save was made since `since` (newest first), for the activity calendar.
   async commitDates(since, maxPages = 10) {
     const dates = [];

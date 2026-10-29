@@ -176,15 +176,15 @@ export function createCourses(ctx) {
         <div class="btn-row"><button class="btn quiet" id="copyCourse">复制 Markdown</button><a class="btn" href="#/course/${h(id)}/edit">编辑课程</a></div>
       </div>
       <article class="sheet course-page">
-        <div class="meta-line">${meta.join("")}</div>
+        <header class="card-head"><div class="meta-line">${meta.join("")}</div>
         <h1 class="card-title">${h(c.title || "未命名课程")}</h1>
-        ${cite ? `<p class="cite">${cite}</p>` : ""}
+        ${cite ? `<p class="cite">${cite}</p>` : ""}</header>
         ${c.goal ? `<p class="why"><b>为什么学：</b>${h(c.goal)}</p>` : ""}
         <div class="course-progress">${bar(p.done, p.total)}<span>已看 ${p.done} / ${p.total} 课</span>
           ${next ? `<a class="btn primary small" href="#/course/${h(id)}/l/${h(next.id)}/edit">继续：${h(next.title || "下一课")}</a>` : ""}</div>
         <section class="section"><div class="sec-head"><h2>课时</h2><a class="btn small${c.lessons.length ? "" : " primary"}" href="#/course/${h(id)}/l/new/edit">＋ 新的一课</a></div>
           ${c.lessons.length ? `<p class="hint small">点任意一课进去看笔记和资料；点左边的圆圈标成看完了。</p><ol class="lesson-list">${c.lessons.map((l, i) => `<li class="${l.done ? "done" : ""}">
-            <button type="button" class="lesson-check" data-done="${h(l.id)}" aria-pressed="${l.done}" title="${l.done ? "标成没看完" : "标成看完了"}">${l.done ? "✓" : i + 1}</button>
+            <button type="button" class="lesson-check" data-done="${h(l.id)}" aria-pressed="${l.done}" title="${l.done ? "标成没看完" : "标成看完了"}" aria-label="第 ${i + 1} 课">${l.done ? "✓" : ""}</button>
             <div class="lesson-main"><a class="lesson-title" href="#/course/${h(id)}/l/${h(l.id)}"><span class="lesson-n">第 ${i + 1} 课</span>${l.title ? h(l.title) : ""}</a>
               ${l.oneLine ? `<p>${h(l.oneLine)}</p>` : ""}
               <div class="facts">${l.date ? `<span>${l.date}</span>` : ""}${l.notes.trim() ? `<span>有笔记</span>` : ""}${l.files.length ? `<span>${l.files.length} 个资料</span>` : ""}${l.marks.length ? `<span>${l.marks.length} 个标记</span>` : ""}${C.openCount(l) ? `<span class="todo-tag">待解决 ${C.openCount(l)}</span>` : ""}</div></div>
@@ -232,8 +232,8 @@ export function createCourses(ctx) {
         <div class="btn-row"><a class="btn" href="#/course/${h(id)}/l/${h(lid)}/edit">记笔记</a></div>
       </div>
       <article class="sheet">
-        <div class="meta-line"><span class="status s-${l.done ? "done" : "reading"}">${l.done ? "看完了" : "没看完"}</span><span>第 ${i + 1} 课</span>${l.date ? `<span>${l.date}</span>` : ""}${l.link ? `<a href="${h(M.paperHref(l.link))}" target="_blank" rel="noopener">视频链接</a>` : ""}</div>
-        <h1 class="card-title">${h(lessonName(l, i))}</h1>
+        <header class="card-head"><div class="meta-line"><span class="status s-${l.done ? "done" : "reading"}">${l.done ? "看完了" : "没看完"}</span><span>第 ${i + 1} 课</span>${l.date ? `<span>${l.date}</span>` : ""}${l.link ? `<a href="${h(M.paperHref(l.link))}" target="_blank" rel="noopener">视频链接</a>` : ""}</div>
+        <h1 class="card-title">${h(lessonName(l, i))}</h1></header>
         ${l.oneLine ? `<section class="one-line"><h2 class="sec-label">这一课讲了什么</h2><div class="sec-body"><p>${h(l.oneLine)}</p></div></section>` : ""}
         ${video ? `<section class="section video-sec"><div class="sec-head"><h2>视频</h2><a class="small" href="${h(C.videoWatchUrl(video))}" target="_blank" rel="noopener">在${video.site === "youtube" ? " YouTube " : " B 站"}打开</a></div>
           <div class="video-box" id="videoBox"><button type="button" class="video-start" data-seek="0"><span>▶</span>在页面里播放</button></div>
@@ -528,7 +528,7 @@ export function createCourses(ctx) {
         </div>
         <section class="stage"><h2><span class="stage-n">1</span>笔记</h2>
           <p class="hint">边看边写，所有内容都在这一个框里。点「⏱ 时间点」记下视频时间，课时页上点它视频就跳过去；没听懂的点「☐ 待解决」，弄懂后在课时页勾上，或改成 [x] 并在后面写答案。支持 Markdown、公式 $…$，截图可以 Ctrl+V 粘贴，选中文字点「术语」可以加入词库。</p>
-          <div class="note-tools"><input class="input page time-input" id="noteTime" placeholder="分:秒" maxlength="9" inputmode="numeric" aria-label="视频时间"><button type="button" class="btn small" id="addTime" title="在光标处插入时间点">⏱ 时间点</button><button type="button" class="btn small" id="addTask" title="插入一条待解决的问题">☐ 待解决</button></div>
+          <div class="note-tools"><input class="input page time-input" id="noteTime" placeholder="分:秒" maxlength="9" inputmode="numeric" aria-label="视频时间"><button type="button" class="btn small" id="addTime" title="在光标处插入时间点"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>时间点</button><button type="button" class="btn small" id="addTask" title="插入一条待解决的问题"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>待解决</button></div>
           <textarea class="textarea notes-big" name="notes" rows="16" placeholder="这一课的笔记"></textarea>${tools("notes")}</section>
         <section class="stage" id="materials"><h2><span class="stage-n">2</span>课件与资料</h2>
           <p class="hint">课件 PDF、PPT、讲义、图片、代码等。选好后马上存进 GitHub 仓库的 materials/ 文件夹，在这一课的页面可以打开和下载；也可以把文件直接拖到这里。同名文件再传会覆盖。仓库是公开的，别传私密文件。单个文件最大 25 MB。</p>

@@ -96,3 +96,36 @@ test("long text is never cut", () => {
   assert.equal(C.normalizeLesson({ id: "l1", title: long, notes: long }).title.length, 80000);
   assert.equal(M.normalizeCard({ id: "20261028-long-ab12", title: long, why: long }).why.length, 80000);
 });
+
+test("terms written but not marked are found", () => {
+  const terms = [
+    { term: "Transformer", zh: "变换器", en: "", def: "" },
+    { term: "注意力", zh: "", en: "attention", def: "" },
+    { term: "自注意力", zh: "", en: "self-attention", def: "" },
+    { term: "LLM", zh: "大语言模型", en: "Large Language Model", def: "" },
+  ];
+  const texts = [
+    "Transformers 用自注意力，不是 RNN。`attention` 在代码里不算，$attention$ 也不算。",
+    "[[变换器]] 已经标过；llm 小写不算，LLMs 算；还有 [链接 attention](http://x) 和 https://a.com/attention 也不算。注意力很重要。",
+  ];
+  const found = T.unmarkedTerms(texts, terms);
+  // Transformer is already marked (as 变换器) in the second box, so it is not suggested.
+  assert.deepEqual(found.map((f) => [f.entry.term, f.field, f.shown]), [["自注意力", 0, "自注意力"], ["LLM", 1, "LLMs"], ["注意力", 1, "注意力"]]);
+  const llm = found[1];
+  assert.equal(T.markAt(texts[1], llm.start, llm.end, "LLM").includes("[[LLMs|LLM]] 算"), true);
+  assert.match(found[0].context.before, /Transformers 用$/);
+
+  const m = T.findMentions("self-attention and attention, attentions; inattention", T.termNames(terms));
+  assert.deepEqual(m.map((x) => x.shown), ["self-attention", "attention", "attentions"]);
+  assert.equal(T.maskMarkdown("a `b` c").length, 7);
+  assert.equal(T.maskMarkdown("x\n```\nattention\n```\ny").includes("attention"), false);
+  assert.deepEqual(T.unmarkedTerms(["没有术语"], terms), []);
+});
+
+test("positions stay right when lowercasing changes a letter's length", () => {
+  const terms = [{ term: "注意力", zh: "", en: "attention", def: "" }];
+  const text = "İ 注意力 and Attention";
+  const [m] = T.findMentions(text, T.termNames(terms));
+  assert.equal(text.slice(m.start, m.end), "注意力");
+  assert.equal(T.markAt(text, m.start, m.end, "注意力"), "İ [[注意力]] and Attention");
+});

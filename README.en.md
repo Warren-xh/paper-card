@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.3** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.4** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -41,6 +41,15 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 - Select a word in any notes box and click **Term** next to bold and italic; add the Chinese and English names and an explanation, and it goes into the library.
 - Marked words get a dotted underline; point at them (or tap on a phone) to see the names and explanation.
 - The library page searches, sorts, edits and deletes terms, and lists the papers, logs and lessons each term appears in.
+- When you write a library term without marking it, the save bar offers to mark it; while reading, the first mention of each term is marked automatically.
+
+**Practice logs can link GitHub commits**: paste a commit, PR or repository address and the log page shows which files and lines changed.
+
+**Outline mode for mind maps**: build a map like a list (Enter, Tab, Shift+Tab); pasting indented text creates branches.
+
+**Reading settings** ("Aa" in the top bar; on phones, in Settings): light, dark and sepia themes; system font, LXGW WenKai, Noto Serif SC or Noto Sans SC; text size, page width and line spacing.
+
+**Paper auto-fill**: enter a DOI or arXiv number under "Link" and click **Auto-fill** for the title, authors, year and venue; with only a title, search by title.
 
 **Search everything**: press **Ctrl+K** (⌘K on a Mac) or the magnifier in the top bar to search papers, logs, courses, **every lesson's notes** and mind maps from one box; arrow keys to pick, Enter to open. With nothing typed it shows quick actions and recent changes.
 
@@ -170,7 +179,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.3"
+git commit -m "Paper Cards v4.4"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -281,6 +290,9 @@ Main files:
 | `js/mindmap.mjs`, `js/map-views.mjs` | Mind-map data, automatic layout and pages |
 | `js/overview.mjs`, `js/overview-views.mjs` | The Today overview and study calendar |
 | `js/search.mjs`, `js/palette.mjs` | Search everything (Ctrl+K) |
+| `js/paperinfo.mjs` | Paper auto-fill (Crossref, DataCite) |
+| `js/ghlinks.mjs` | GitHub commits in practice logs |
+| `js/reading.mjs` | Reading settings: theme, font, size, width |
 | `js/terms.mjs`, `js/terms-views.mjs` | Term library: marking terms, pop-up explanations, the library page |
 | `js/enhance.mjs` | Image viewer, code colours, Ctrl+S, back to top, PDF preview |
 | `js/i18n.mjs` | Interface language (Chinese / English) |

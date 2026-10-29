@@ -137,6 +137,42 @@ export function moveAmongSiblings(root, id, delta) {
   return true;
 }
 
+// Indented text (tabs or spaces, with or without "- ", "* ", "1. " bullets) as
+// a list of branches: [{ text, children }]. Used when pasting into the outline.
+export function parseOutline(text) {
+  const top = { children: [] };
+  const stack = [{ indent: -1, node: top }];
+  for (const line of String(text || "").replace(/\r\n?/g, "\n").split("\n")) {
+    const expanded = line.replace(/\t/g, "    ");
+    const body = expanded.trim().replace(/^#{1,6}\s+/, "").replace(/^(?:[-*+•]|\d+[.)、])\s+/, "").replace(/^\[[ xX]\]\s+/, "").trim();
+    if (!body) continue;
+    const indent = expanded.match(/^ */)[0].length;
+    while (stack.at(-1).indent >= indent) stack.pop();
+    const node = { text: body, children: [] };
+    stack.at(-1).node.children.push(node);
+    stack.push({ indent, node });
+  }
+  return top.children;
+}
+
+// Branches from parseOutline as map nodes (new ids).
+export const outlineNodes = (list, random = Math.random) =>
+  list.map((x) => newNode({ text: x.text, children: outlineNodes(x.children, random) }, random));
+
+// Outline moves: one step in (under the previous sibling) or out (after the parent).
+export function indentNode(root, id) {
+  const hit = find(root, id);
+  if (!hit?.parent || hit.index === 0) return false;
+  return moveNode(root, id, hit.parent.children[hit.index - 1].id);
+}
+export function outdentNode(root, id) {
+  const hit = find(root, id);
+  if (!hit?.parent) return false;
+  const up = find(root, hit.parent.id);
+  if (!up?.parent) return false;
+  return moveNode(root, id, up.parent.id, up.index + 1);
+}
+
 // Which cards and logs a map already points at.
 export function linkedRefs(root) {
   const out = { card: new Set(), log: new Set(), course: new Set() };

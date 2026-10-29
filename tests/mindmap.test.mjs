@@ -93,3 +93,24 @@ test("balanced layout without overlaps", () => {
   assert.equal(folded.boxes.size, 18);
   assert.ok(!folded.boxes.has("b0c0"));
 });
+
+test("outline: pasted text becomes branches, and branches move in and out", () => {
+  const list = MM.parseOutline("机器学习\n  - 监督学习\n      1. 分类\n      2. 回归\n  - 无监督学习\n\t聚类\n深度学习\n");
+  assert.deepEqual(list.map((x) => x.text), ["机器学习", "深度学习"]);
+  assert.deepEqual(list[0].children.map((x) => x.text), ["监督学习", "无监督学习"]);
+  assert.deepEqual(list[0].children[1].children.map((x) => x.text), ["聚类"]); // a tab is deeper than two spaces
+  assert.deepEqual(list[0].children[0].children.map((x) => x.text), ["分类", "回归"]);
+  assert.deepEqual(MM.parseOutline("- [ ] 待办\n# 标题\n\n"), [{ text: "待办", children: [] }, { text: "标题", children: [] }]);
+  const nodes = MM.outlineNodes(list);
+  assert.match(nodes[0].id, /^[a-z0-9]{8}$/);
+  assert.equal(nodes[0].children[0].children[1].text, "回归");
+
+  const map = MM.emptyMap("20261028-outline-ab12", "中心");
+  const [a, b, c] = ["a", "b", "c"].map((t) => MM.addChild(map.root, "root", MM.newNode({ text: t })));
+  assert.equal(MM.indentNode(map.root, a.id), false);          // nothing before it
+  assert.equal(MM.indentNode(map.root, b.id), true);           // b goes under a
+  assert.deepEqual(a.children.map((x) => x.text), ["b"]);
+  assert.equal(MM.outdentNode(map.root, b.id), true);          // and back out, right after a
+  assert.deepEqual(map.root.children.map((x) => x.text), ["a", "b", "c"]);
+  assert.equal(MM.outdentNode(map.root, c.id), false);         // top-level branches stay
+});

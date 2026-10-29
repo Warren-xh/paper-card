@@ -80,7 +80,7 @@ export function createPalette({ state, loadCourseFiles, actions }) {
           return `<a class="pl-item k-${e.kind}" role="option" id="pl-${i}" data-i="${i}" href="${h(e.href || "#")}" aria-selected="${i === active}">
             <span class="pl-icon">${kindIcon(e.kind)}</span>
             <span class="pl-main"><b>${highlight(e.label || e.title, q)}</b>${e.sub ? `<small>${highlight(e.sub, q)}</small>` : ""}${snip ? `<small class="pl-snip">${highlight(snip, q)}</small>` : ""}</span>
-            ${e.kind !== "action" ? `<span class="pl-kind">${S.KIND_LABELS[e.kind] || ""}</span>` : e.hint ? `<span class="pl-kind">${h(e.hint)}</span>` : ""}</a>`;
+            ${e.kind === "action" ? (e.hint ? `<span class="pl-kind">${h(e.hint)}</span>` : "") : q ? "" : `<span class="pl-kind">${S.KIND_LABELS[e.kind] || ""}</span>`}</a>`;
         }).join("")).join("")
       : `<p class="pl-empty">没有找到「${h(q)}」。换个关键词试试。</p>`;
     input.setAttribute("aria-activedescendant", shown.length ? "pl-" + active : "");

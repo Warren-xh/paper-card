@@ -10,10 +10,29 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='6' width='26' height='20' rx='2' fill='%23fff' stroke='%231f5f8b' stroke-width='2'/%3E%3Cpath d='M3 12h26' stroke='%23d9485f' stroke-width='2'/%3E%3Cpath d='M8 17h16M8 21h11' stroke='%231f5f8b' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 <script>
+  // Reading settings (js/reading.mjs) go on before the page draws, so nothing flashes.
   try {
-    const t = localStorage.getItem("pc-theme");
-    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-  } catch {}
+    var r = JSON.parse(localStorage.getItem("pc-reading") || "null") || {};
+    var old = JSON.parse(localStorage.getItem("pc-theme") || "null");
+    var d = document.documentElement;
+    var theme = r.theme || old;
+    // "auto" (or nothing chosen) follows the system; the stylesheet always reads data-theme.
+    if (theme !== "light" && theme !== "dark" && theme !== "sepia") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    d.dataset.theme = theme;
+    ["font", "size", "width", "leading"].forEach(function (k) { if (typeof r[k] === "string") d.dataset[k] = r[k]; });
+    var fonts = {
+      wenkai: ["https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css", "https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-bold.css"],
+      serif: ["https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap"],
+      sans: ["https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap"]
+    };
+    (fonts[r.font] || []).forEach(function (href, i) {
+      var l = document.createElement("link");
+      l.rel = "stylesheet"; l.href = href; l.id = "font-" + r.font + "-" + i;
+      document.head.appendChild(l);
+    });
+  } catch (e) {}
+  // Storage blocked: still follow the system.
+  if (!document.documentElement.dataset.theme) document.documentElement.dataset.theme = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 </script>
 </head>
 <body>
@@ -28,12 +47,10 @@
     <nav class="topnav" aria-label="主导航">
       <button type="button" class="icon-btn search-btn" id="searchBtn" aria-label="搜索（Ctrl+K）" title="搜索（Ctrl+K）"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
       <a href="#/terms" data-nav="terms" aria-label="词库" title="词库"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg><span class="nav-label">词库</span></a>
-      <a href="#/review" data-nav="review">回顾<span class="nav-badge" id="dueBadge" hidden></span></a>
+      <a href="#/review" data-nav="review" aria-label="回顾" title="回顾"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg><span class="nav-label">回顾</span><span class="nav-badge" id="dueBadge" hidden></span></a>
       <a href="#/settings" data-nav="settings" aria-label="设置"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="nav-label">设置</span></a>
       <button type="button" class="icon-btn lang-btn" id="langBtn" aria-label="切换语言" title="切换语言 / Language" data-no-tr>EN</button>
-      <button type="button" class="icon-btn" id="themeBtn" aria-label="切换明暗主题" title="切换明暗主题">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
-      </button>
+      <button type="button" class="icon-btn aa-btn" id="themeBtn" aria-label="阅读设置" title="阅读设置：主题、字体、字号、行宽" aria-haspopup="dialog" aria-expanded="false" aria-controls="readingPop" data-no-tr>Aa</button>
       <button type="button" class="lock-btn" id="lockBtn"></button>
     </nav>
   </div>

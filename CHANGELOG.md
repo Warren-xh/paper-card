@@ -3,6 +3,25 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.4 — 2026-10-29
+
+- 论文卡片**自动填写**：在「链接」里填 DOI 或 arXiv 编号（或贴论文网址），标题、作者、年份、会议自动填好；只写了标题时按标题查找，从结果里挑一篇。数据来自 Crossref 和 DataCite。
+  Paper cards **auto-fill**: enter a DOI or arXiv number (or paste the paper's address) and the title, authors, year and venue fill in; with only a title, search by title and pick one. Data from Crossref and DataCite.
+- 实操记录可以**关联 GitHub 提交**（也可以是 PR、两次提交的对比或整个仓库）；记录页显示每次提交改了哪些文件、每个文件改了哪几行。贴仓库地址可以从最近的提交里挑。
+  Practice logs can **link GitHub commits** (or PRs, comparisons, repositories); the log page shows which files and lines changed. Paste a repository to pick from its recent commits.
+- 思维导图新增**大纲模式**：像写列表一样搭导图，Enter 新的一行、Tab 缩进、Shift+Tab 提出；粘贴带缩进的多行文字直接变成分支。
+  Mind maps get an **outline mode**: build a map like a list — Enter, Tab, Shift+Tab — and paste indented text to create many branches at once.
+- **发现未标注的术语**：笔记里写到词库里的词但没标注时，保存栏提示，一次勾选标注；阅读时还会自动标出每个术语第一次出现的地方（可关）。
+  **Unmarked terms**: the save bar points out library terms you wrote but didn't mark, and marks them in one go; while reading, the first mention of each term is marked automatically (can be turned off).
+- **阅读设置**（顶栏「Aa」，手机上在设置页）：浅色 / 深色 / 护眼米黄主题，系统字体 / 霞鹜文楷 / 思源宋体 / 思源黑体，字号、行宽、行距。
+  **Reading settings** ("Aa" in the top bar; on phones in Settings): light, dark and sepia themes; system font, LXGW WenKai, Noto Serif SC or Noto Sans SC; text size, page width and line spacing.
+- **界面再打磨**：全站统一成一套颜色、圆角和阴影，每个模块一种强调色（设置页不带模块色）；论文、实操、课程、导图的列表块统一成「标签 → 红色页边线 → 标题 → 进度小圆点」；详情页有统一的标题区；编辑框的工具栏贴在框上；空页面有插图；下拉框、标签、按钮样式一致；深色主题重新调色。
+  **Visual polish**: one set of colours, corners and shadows across the site, one accent per module (none on Settings); paper, log, course and map tiles share one layout (tags, the red margin rule, title, progress dots); detail pages share one header; editor toolbars sit on their box; empty pages get an illustration; selects, tags and buttons match; the dark theme is re-tuned.
+- **手机上更合身**：顶栏在任何宽度、中英文下都放得下（放不下时模块栏可以左右滑，当前模块总在视野里）；筛选栏的搜索框独占一行；学习日历显示最近 18 周。
+  **Better on phones**: the top bar fits any width in either language (the module bar scrolls sideways when needed, keeping the current module in view); the filter search gets its own row; the study calendar shows the last 18 weeks.
+- 修复：深色 / 浅色的选择刷新后会丢失；连续打开两个对话框时，第二个有时会自己关掉。
+  Fixed: the light / dark choice was lost after reloading; opening a dialog right after another could close it by itself.
+
 ## v4.3 — 2026-10-28
 
 - 新的**词库**（顶栏「词库」）：在任何笔记框里选中一个词，点加粗、斜体旁边的「**术语**」，写下中文、英文和解释，就会收进词库；笔记里这个词带虚线下划线，指上去或点一下就弹出中英文和解释。词库页可以搜索、排序、编辑、删除，并列出每个术语出现在哪些论文、实操、课时里；全站搜索也能搜到术语。

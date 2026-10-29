@@ -54,9 +54,9 @@ export function createOverview(ctx) {
     const total = weeks.flat().reduce((t, d) => t + d.n, 0);
     return `
       <div class="hm-stats">
-        <span class="stat"><b>${st}</b>天连续学习</span>
-        <span class="stat"><b>${active}</b>天 · 近 30 天</span>
-        <span class="stat"><b>${total}</b>${unit} · 近半年</span>
+        <span class="stat-inline"><b>${st}</b><span data-en="day streak">天连续学习</span></span>
+        <span class="stat-inline"><b>${active}</b><span data-en="${active === 1 ? "day" : "days"} active in the last 30">天 · 近 30 天</span></span>
+        <span class="stat-inline"><b>${total}</b><span data-en="${exact ? (total === 1 ? "save" : "saves") : total === 1 ? "entry" : "entries"} in six months">${unit} · 近半年</span></span>
       </div>
       <div class="heatmap" role="img" aria-label="近半年每天的学习记录">
         <div class="hm-months">${months}</div>

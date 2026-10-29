@@ -166,6 +166,97 @@ export function createTerms(ctx) {
     if (area) markSelection(area);
   });
 
+  /* ---------- terms written in an editor but not marked yet ---------- */
+  // Boxes shown as Markdown (one-liners and short fields are plain text, so they are left alone).
+  const NOTE_BOXES = "textarea.textarea:not(.one):not(.short):not(.code), textarea[data-k=text], textarea[data-solve]";
+  function watchEditor(form) {
+    const bar = $(".editor-bar");
+    if (!bar || form.dataset.termWatch) return;
+    form.dataset.termWatch = "1";
+    const hint = Object.assign(document.createElement("button"), { type: "button", className: "term-hint", hidden: true });
+    bar.insertBefore(hint, bar.querySelector(".btn-row"));
+    let found = [];
+    let boxes = [];
+    const scan = () => {
+      if (!form.isConnected) return;
+      boxes = $$(NOTE_BOXES, form).filter((b) => !b.closest("[hidden]"));
+      found = state.terms.terms.length ? T.unmarkedTerms(boxes.map((b) => b.value), state.terms.terms) : [];
+      hint.hidden = !found.length;
+      hint.textContent = `发现 ${found.length} 个未标注的术语`;
+      hint.title = found.map((f) => f.entry.term).join("、");
+    };
+    let timer;
+    form.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(scan, 700); });
+    form.addEventListener("focusin", scan, { once: true });
+    scan();
+    hint.onclick = async () => {
+      scan();
+      if (!found.length) return;
+      const picked = await dialog(`
+        <form method="dialog" class="term-scan">
+          <h2>标注术语</h2>
+          <p class="small">这些词在词库里，但这条笔记里还没标注。勾上的会在第一次出现的地方标成术语。</p>
+          <ul class="scan-list">${found.map((f, i) => `<li><label><input type="checkbox" data-i="${i}" checked>
+            <span><b>${h(f.entry.term)}</b>${f.entry.zh || f.entry.en ? `<small>${[f.entry.zh, f.entry.en].filter(Boolean).map(h).join(" · ")}</small>` : ""}
+            <q>${h(f.context.before)}<mark>${h(f.shown)}</mark>${h(f.context.after)}</q></span></label></li>`).join("")}</ul>
+          <div class="dialog-actions"><button type="button" class="btn quiet" data-v="0">取消</button><button type="submit" class="btn primary">标注选中的</button></div>
+        </form>`, (el, close) => {
+        $("[data-v]", el).onclick = () => close(null);
+        $("form", el).onsubmit = (e) => { e.preventDefault(); close($$("[data-i]", el).filter((c) => c.checked).map((c) => found[+c.dataset.i])); };
+      });
+      if (!picked?.length) return;
+      // Later mentions first, so earlier positions stay valid.
+      for (const f of [...picked].sort((a, b) => b.field - a.field || b.start - a.start)) {
+        const box = boxes[f.field];
+        if (!box?.isConnected || box.value.slice(f.start, f.end) !== f.shown) continue;
+        box.value = T.markAt(box.value, f.start, f.end, f.entry.term);
+      }
+      new Set(picked.map((f) => boxes[f.field])).forEach((box) => box?.dispatchEvent(new Event("input", { bubbles: true })));
+      toast(`已标注 ${picked.length} 个术语。`);
+      scan();
+    };
+  }
+  new MutationObserver(() => { const form = $("form#editor"); if (form) watchEditor(form); }).observe(main, { childList: true });
+
+  // While reading, the first mention of each library term gets the same card,
+  // without changing the text (a reading setting turns this off).
+  const AUTO_SCOPE = ".md, .sec-body, .step-view, .mark-view, .solve-view";
+  const AUTO_SKIP = "code, pre, a, button, label, .term, .katex, .math, textarea, input, h1, h2, h3, .tp-head";
+  function autoMark(root) {
+    if (!ctx.autoTerms() || !state.terms.terms.length || !root?.querySelectorAll || root.closest?.("form, .term-pop")) return;
+    const scopes = [...(root.matches?.(AUTO_SCOPE) ? [root] : []), ...root.querySelectorAll(AUTO_SCOPE)].filter((s) => !s.closest("form"));
+    if (!scopes.length) return;
+    const names = T.termNames(state.terms.terms);
+    const done = new Set($$(".term", main).map((el) => T.findTerm(state.terms, el.dataset.term)).filter(Boolean).map((t) => T.termKey(t.term)));
+    for (const scope of scopes) {
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+        acceptNode: (n) => (n.parentElement.closest(AUTO_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+      });
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      for (const node of nodes) {
+        const text = node.nodeValue;
+        const pick = T.findMentions(text, names).filter((m) => {
+          const k = T.termKey(m.entry.term);
+          return done.has(k) ? false : done.add(k);
+        });
+        if (!pick.length) continue;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        for (const m of pick) {
+          frag.append(text.slice(last, m.start));
+          const span = Object.assign(document.createElement("span"), { className: "term auto", tabIndex: 0, textContent: m.shown });
+          span.setAttribute("role", "button");
+          span.dataset.term = m.entry.term;
+          frag.append(span);
+          last = m.end;
+        }
+        frag.append(text.slice(last));
+        node.replaceWith(frag);
+      }
+    }
+  }
+
   /* ---------- #/terms ---------- */
   const SORTS = [["name", "名称 A→Z"], ["new", "最近添加"], ["used", "出现最多"]];
   let usage = new Map();
@@ -267,5 +358,5 @@ export function createTerms(ctx) {
     }
   }
 
-  return { loadTerms, page, markSelection, toMarkdown: () => T.libraryToMarkdown(state.terms) };
+  return { loadTerms, page, markSelection, autoMark, toMarkdown: () => T.libraryToMarkdown(state.terms) };
 }

@@ -12,8 +12,10 @@ import { createOverview } from "./overview-views.mjs";
 import { createPalette, kindIcon } from "./palette.mjs";
 import { startEnhancements, highlightCode } from "./enhance.mjs";
 import { createTerms } from "./terms-views.mjs";
+import * as PI from "./paperinfo.mjs";
+import * as R from "./reading.mjs";
 
-export const VERSION = "4.3";
+export const VERSION = "4.4";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -36,15 +38,16 @@ const state = {
 };
 
 /* ---------- storage helpers (browser storage may be unavailable) ---------- */
+// `area` defaults to localStorage, looked up inside the try: reading it throws when storage is blocked.
 const store = {
-  get(key, area = localStorage) {
-    try { return JSON.parse(area.getItem(key)); } catch { return null; }
+  get(key, area) {
+    try { return JSON.parse((area === undefined ? localStorage : area).getItem(key)); } catch { return null; }
   },
-  set(key, value, area = localStorage) {
-    try { area.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
+  set(key, value, area) {
+    try { (area === undefined ? localStorage : area).setItem(key, JSON.stringify(value)); return true; } catch { return false; }
   },
-  del(key, area = localStorage) {
-    try { area.removeItem(key); } catch {}
+  del(key, area) {
+    try { (area === undefined ? localStorage : area).removeItem(key); } catch {}
   },
 };
 const session = (() => { try { return sessionStorage; } catch { return null; } })();
@@ -213,9 +216,10 @@ function toast(message, kind = "") {
 function dialog(html, setup) {
   const el = $("#dialog");
   el.innerHTML = html;
+  el.onclick = null;
   return new Promise((resolve) => {
     const close = (value) => { el.close(); resolve(value); };
-    el.onclose = () => resolve(undefined);
+    el.onclose = () => { if (!el.open) resolve(undefined); };
     el.oncancel = () => resolve(undefined);
     setup?.(el, close);
     el.showModal();
@@ -266,6 +270,7 @@ function loadKatex() {
 }
 async function typesetMath(root) {
   highlightCode(root);
+  terms.autoMark(root);
   const nodes = $$(".math", root);
   if (!nodes.length) return;
   try {
@@ -320,9 +325,10 @@ async function loadSite() {
 
 function applySite() {
   const mode = document.body.dataset.mode;
-  const name = mode === "lab" ? "实操记录" : mode === "course" ? "课程笔记" : mode === "map" ? "思维导图" : state.site.title || "文献卡片";
-  $("#brandName").textContent = name;
-  document.title = T(name);
+  const site = state.site.title || "文献卡片";
+  const module = { lab: "实操记录", course: "课程笔记", map: "思维导图", terms: "词库", today: "今天" }[mode];
+  $("#brandName").textContent = site;
+  document.title = (module ? T(module) + " · " : "") + T(site);
 }
 
 // Two modes share one site: paper cards (文献) and practice logs (实操).
@@ -332,7 +338,25 @@ function setMode(mode) {
   $("#brand").setAttribute("href", "#/today");
   store.set("pc-mode", mode);
   applySite();
+  fitModeSwitch(true);
 }
+
+// On a narrow phone (or in English) the modules may not all fit: the switch
+// scrolls sideways, keeps the current module in view and fades the cut-off side.
+function fitModeSwitch(reveal) {
+  const ms = $(".mode-switch");
+  const cur = ms.querySelector("[aria-current]");
+  if (reveal && cur && ms.scrollWidth > ms.clientWidth) {
+    const a = cur.getBoundingClientRect();
+    const b = ms.getBoundingClientRect();
+    if (a.left < b.left) ms.scrollLeft -= b.left - a.left + 24;
+    else if (a.right > b.right) ms.scrollLeft += a.right - b.right + 24;
+  }
+  const start = ms.scrollLeft > 1;
+  const end = ms.scrollLeft + ms.clientWidth < ms.scrollWidth - 1;
+  ms.dataset.clip = [start && "start", end && "end"].filter(Boolean).join(" ");
+}
+const modeSwitchWatch = new ResizeObserver(() => fitModeSwitch(true));
 
 async function loadIndex() {
   state.index = M.normalizeIndex(await readData(M.INDEX_PATH));
@@ -550,7 +574,7 @@ async function route() {
     setMode("map");
     $$(".topnav a").forEach((a) => a.removeAttribute("aria-current"));
     try {
-      await (arg ? maps.view(decodeURIComponent(arg), arg2 === "edit" ? "edit" : "browse") : maps.list());
+      await (arg ? maps.view(decodeURIComponent(arg), arg2 === "edit" || arg2 === "outline" ? arg2 : "browse") : maps.list());
     } catch (error) {
       console.error(error);
       main.innerHTML = `<div class="sheet"><h1>页面打不开</h1><p>${h(error.message)}</p><p><a href="#/map">回到全部导图</a></p></div>`;
@@ -582,6 +606,7 @@ async function route() {
   const param = isLab ? (arg === "e" || arg === "edit" ? arg2 : "") : name === "new" ? "" : arg;
   if (isLab) setMode("lab");
   else if (view !== "settings" && view !== "setup") setMode("cards");
+  else { document.body.dataset.mode = "settings"; $$(".mode-switch a").forEach((a) => a.removeAttribute("aria-current")); applySite(); }
   const nav = view === "review" || view === "settings" ? view : view === "setup" ? "settings" : "";
   $$(".topnav a").forEach((a) => (a.dataset.nav === nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
   try {
@@ -597,7 +622,7 @@ let editorDirty = false;
 let leaveEditor = async () => true;
 
 const lab = createLab({
-  state, $, $$, h, renderMarkdown, renderInline, toast, confirmDialog, copyText, typesetMath, store,
+  state, $, $$, h, renderMarkdown, renderInline, toast, dialog, confirmDialog, copyText, typesetMath, store, session,
   readData: (path) => readData(path),
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
@@ -633,6 +658,7 @@ const overview = createOverview({
 
 const terms = createTerms({
   state, $, $$, h, toast, dialog, confirmDialog, store, renderMarkdown, renderInline, typesetMath, sortSelect,
+  autoTerms: () => state.reading.autoTerms,
   readData: (path) => readData(path),
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
@@ -651,7 +677,7 @@ const palette = createPalette({
     { label: "词库", hint: state.terms.terms.length + " 个术语", href: "#/terms", keys: "terms glossary ciku" },
     ...(M.dueCards(state.index.cards).length ? [{ label: "开始回顾", hint: M.dueCards(state.index.cards).length + " 张", href: "#/review", keys: "review" }] : []),
     { label: "设置", href: "#/settings", keys: "settings" },
-    { label: "切换明暗主题", run: () => $("#themeBtn").click(), keys: "theme dark light" },
+    { label: "阅读设置", hint: "主题 · 字体 · 字号", run: () => openReading(), keys: "theme dark light sepia font reading zhuti ziti" },
   ],
 });
 
@@ -689,7 +715,8 @@ async function home() {
   const statsHtml = cards.length
     ? `<div class="stats">
         <span class="stat"><b>${s.total}</b>张卡片</span>
-        <span class="stat"><b>${s.done}</b>篇读完 · ${s.reading} 篇在读</span>
+        <span class="stat"><b>${s.done}</b>篇读完</span>
+        <span class="stat"><b>${s.reading}</b>篇在读</span>
         <span class="stat"><b>${s.thisMonth}</b>篇本月</span>
         <span class="stat"><b>${s.reviews}</b>次回顾</span>
         ${s.questions ? `<span class="stat"><b>${s.questions}</b>条待解决</span>` : ""}
@@ -774,7 +801,7 @@ function tileHtml(x, today) {
     <p class="pcard-one">${x.oneLine ? h(x.oneLine) : '<span class="untitled">还没写一句话</span>'}</p>
     <div class="pcard-paper"><h3>${x.title ? h(x.title) : '<span class="untitled">未写标题</span>'}</h3>
       ${cite ? `<p>${h(cite)}</p>` : ""}</div>
-    <div class="pcard-foot"><span class="tags">${tags}</span><span class="prog" title="七栏写了 ${x.filled} 栏">${x.filled}/7</span></div>
+    <div class="pcard-foot"><span class="tags">${tags}</span><span class="dots" title="七栏写了 ${x.filled} 栏" aria-label="${x.filled}/7">${Array.from({ length: 7 }, (_, i) => `<i${i < x.filled ? ' class="on"' : ""}></i>`).join("")}</span></div>
   </a>`;
 }
 
@@ -855,9 +882,9 @@ function headHtml(c) {
   if (c.project) meta.push(`<span>项目：${h(c.project)}</span>`);
   if (c.tags.length) meta.push(`<span>${c.tags.map((t) => `<a href="#/" data-goto-tag="${h(t)}">#${h(t)}</a>`).join(" ")}</span>`);
   const cite = M.citation(c);
-  return `<div class="meta-line">${meta.join("")}</div>
+  return `<header class="card-head"><div class="meta-line">${meta.join("")}</div>
     <h1 class="card-title">${c.title ? h(c.title) : '<span class="untitled">未写标题</span>'}</h1>
-    ${cite || c.link ? `<p class="cite">${h(cite)}${c.link ? `${cite ? " · " : ""}<a href="${h(M.paperHref(c.link))}" target="_blank" rel="noopener">${h(linkLabel(c.link))}</a>` : ""}</p>` : ""}
+    ${cite || c.link ? `<p class="cite">${h(cite)}${c.link ? `${cite ? " · " : ""}<a href="${h(M.paperHref(c.link))}" target="_blank" rel="noopener">${h(linkLabel(c.link))}</a>` : ""}</p>` : ""}</header>
     ${c.pdf ? `<div class="pdf-block"><p class="pdf-line"><button type="button" class="btn small" data-preview="${h(c.pdf)}" aria-expanded="false">预览</button><a class="btn small" href="${h(c.pdf)}" download="${h(pdfName(c))}">下载论文 PDF</a><a class="small" href="${h(c.pdf)}" target="_blank" rel="noopener">在新标签页打开</a></p><div class="pdf-preview" hidden></div></div>` : ""}
     ${c.why ? `<p class="why"><b>为什么读：</b>${h(c.why)}</p>` : ""}`;
 }
@@ -1043,7 +1070,7 @@ async function editView(id) {
         <label class="field"><span>作者</span><input name="authors" placeholder="作者姓名"></label>
         <label class="field"><span>年份</span><input name="year" type="number" min="1800" max="2200" inputmode="numeric" placeholder="发表年份"></label>
         <label class="field"><span>会议 / 期刊</span><input name="venue" placeholder="会议或期刊名称"></label>
-        <label class="field"><span>链接</span><input name="link" placeholder="网址、DOI 或 arXiv 编号"></label>
+        <div class="field"><label class="label" for="cardLink">链接</label><div class="input-btn"><input id="cardLink" name="link" placeholder="DOI、arXiv 编号或网址"><button type="button" class="btn small" id="autoFill" title="填了 DOI 或 arXiv 编号：自动填写标题、作者、年份、会议；只写了标题：按标题查找论文">自动填写</button></div></div>
         <label class="field"><span>标签</span><input name="tags" list="tagList" placeholder="用逗号分开"></label>
         <label class="field"><span>项目</span><input name="project" list="projList" placeholder="可以留空"></label>
         <label class="field"><span>阅读日期</span><input name="readDate" type="date"></label>
@@ -1135,6 +1162,72 @@ async function editView(id) {
   form.year.value = card.year ?? "";
   form.tags.value = card.tags.join(", ");
   for (const k of ["datasets", "baselines", "numbers"]) form[k].value = card.proof[k];
+
+  // Paper details from a DOI, an arXiv number or the title (Crossref, DataCite).
+  const FIELD_NAMES = { title: "标题", authors: "作者", year: "年份", venue: "会议 / 期刊", link: "链接" };
+  const autoBtn = $("#autoFill");
+  const applyFound = async (found, quiet = false) => {
+    if (!form.isConnected) return;
+    const now = { title: form.title.value, authors: form.authors.value, year: form.year.value, venue: form.venue.value, link: form.link.value };
+    const { fill, conflicts } = PI.planFill(now, found);
+    if (conflicts.length && !(await confirmDialog("覆盖已经写的内容？", "查到的和这些栏里写的不一样：" + conflicts.map((k) => FIELD_NAMES[k]).join("、") + "。点「覆盖」用查到的；点「取消」只填空着的栏。", "覆盖")))
+      conflicts.forEach((k) => delete fill[k]);
+    if (!form.isConnected) return;
+    for (const [k, v] of Object.entries(fill)) form[k].value = v;
+    if (Object.keys(fill).length) {
+      changed();
+      toast("已填好" + Object.keys(fill).map((k) => FIELD_NAMES[k]).join("、") + "（来自 " + found.source + "）。");
+    } else if (!quiet) toast("查到的和已经写的一样。");
+  };
+  const pickPaper = (list, q) => dialog(`
+    <h2>选一篇论文</h2>
+    <p class="small">${list.length ? `按标题「${h(q)}」找到下面这些，点一篇填进卡片。` : `按标题「${h(q)}」没有找到。换个写法试试，或者直接在「链接」里填 DOI / arXiv 编号。`}</p>
+    ${list.length ? `<div class="paper-picks">${list.map((p, i) => {
+      const names = p.authors ? p.authors.split(", ") : [];
+      const who = names.slice(0, 3).join(", ") + (names.length > 3 ? " 等" : "");
+      return `<button type="button" class="paper-pick" data-i="${i}"><b>${h(p.title)}</b><span>${h([who, p.year, p.venue].filter(Boolean).join(" · "))}</span><em>${h(p.source)}</em></button>`;
+    }).join("")}</div>` : ""}
+    <div class="dialog-actions"><button type="button" class="btn quiet" data-v="0">取消</button></div>`,
+  (el, close) => {
+    $("[data-v]", el).onclick = () => close(null);
+    $$("[data-i]", el).forEach((b) => (b.onclick = () => close(list[+b.dataset.i])));
+  });
+  async function autoFill(quiet = false) {
+    if (autoBtn.disabled) return;
+    const link = form.link.value.trim();
+    const title = form.title.value.trim();
+    if (!PI.parsePaperId(link) && !title) {
+      toast("先在「链接」里填 DOI 或 arXiv 编号，或者写好标题，再点「自动填写」。", "error");
+      return form.link.focus();
+    }
+    autoBtn.disabled = true;
+    autoBtn.textContent = "正在查…";
+    try {
+      if (PI.parsePaperId(link)) await applyFound(await PI.lookupPaper(link), quiet);
+      else {
+        const found = await PI.searchPapers(title);
+        if (!form.isConnected) return;
+        const pick = await pickPaper(found, title);
+        if (pick) await applyFound(pick);
+      }
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      autoBtn.disabled = false;
+      autoBtn.textContent = "自动填写";
+    }
+  }
+  autoBtn.onclick = () => autoFill();
+  // A DOI or arXiv number pasted into a card without a title fills it right away.
+  let tried = "";
+  const autoOnPaste = () => setTimeout(() => {
+    const v = form.link.value.trim();
+    if (v === tried || form.title.value.trim() || !PI.parsePaperId(v)) return;
+    tried = v;
+    autoFill(true);
+  }, 0);
+  form.link.addEventListener("paste", autoOnPaste);
+  form.link.addEventListener("change", autoOnPaste);
 
   let status = card.status;
   const paintStatus = () => $$("[data-status]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.status === status)));
@@ -1543,12 +1636,18 @@ async function settingsView() {
       <div class="btn-row"><button class="btn" id="exportMd">下载全部论文卡片（Markdown）</button><button class="btn" id="exportLogs">下载全部实操记录（Markdown）</button><button class="btn" id="exportCourses">下载全部课程笔记（Markdown）</button><button class="btn" id="exportTerms">下载词库（Markdown）</button><button class="btn" id="exportJson">下载全部（JSON）</button></div>
     </div>
     <div class="sheet">
+      <h2 style="margin-top:0">阅读与外观</h2>
+      <p class="muted small">只保存在这台设备上。电脑上也可以点顶栏的「Aa」随时调整。</p>
+      <div id="readingHere">${R.readingFormHtml(state.reading, h)}</div>
+    </div>
+    <div class="sheet">
       <h2 style="margin-top:0">界面语言</h2>
       <p class="muted small">只翻译界面，你写的内容不会被翻译。</p>
       <div class="seg" role="group" aria-label="界面语言">${Object.entries(LANGS).map(([k, label]) => `<button type="button" data-lang="${k}" aria-pressed="${getLang() === k}" data-no-tr>${label}</button>`).join("")}</div>
       <p class="muted small" style="margin:18px 0 0">版本 ${VERSION} · <a href="${PROJECT_URL}" target="_blank" rel="noopener">源代码与部署说明</a></p>
     </div>`;
   $$("[data-lang]").forEach((b) => (b.onclick = () => { if (b.dataset.lang !== getLang()) { setLang(b.dataset.lang); location.reload(); } }));
+  R.bindReadingForm($("#readingHere"), () => state.reading, setReading);
 
   $("#siteForm").onsubmit = async (event) => {
     event.preventDefault();
@@ -1698,24 +1797,70 @@ async function setupView() {
   };
 }
 
+/* ---------- reading settings (theme, font, size, width, spacing) ---------- */
+state.reading = R.normalizeReading(store.get(R.READING_KEY), store.get("pc-theme"));
+R.applyReading(state.reading);
+function setReading(next) {
+  const before = state.reading;
+  state.reading = R.normalizeReading(next);
+  store.set(R.READING_KEY, state.reading);
+  store.del("pc-theme");
+  R.applyReading(state.reading);
+  if (before.autoTerms !== state.reading.autoTerms) {
+    if (state.reading.autoTerms) terms.autoMark(main);
+    else $$(".term.auto", main).forEach((el) => el.replaceWith(el.textContent));
+  }
+}
+// The "Aa" panel under the top bar button (on phones: the settings page).
+let readingPop;
+function openReading() {
+  const btn = $("#themeBtn");
+  if (!btn.offsetParent) { location.hash = "#/settings"; return; }
+  if (readingPop && !readingPop.hidden) return closeReading();
+  if (!readingPop) {
+    readingPop = Object.assign(document.createElement("div"), { className: "reading-pop", hidden: true, id: "readingPop" });
+    readingPop.setAttribute("role", "dialog");
+    readingPop.setAttribute("aria-label", "阅读设置");
+    document.body.append(readingPop);
+    R.bindReadingForm(readingPop, () => state.reading, setReading);
+  }
+  readingPop.innerHTML = `<div class="rp-head"><b>阅读设置</b><a href="#/settings" class="small">更多设置</a></div>${R.readingFormHtml(state.reading, h)}`;
+  const r = btn.getBoundingClientRect();
+  readingPop.style.top = r.bottom + 8 + "px";
+  readingPop.style.right = Math.max(8, innerWidth - r.right - 8) + "px";
+  readingPop.hidden = false;
+  btn.setAttribute("aria-expanded", "true");
+  setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+  document.addEventListener("keydown", onEsc, true);
+  readingPop.querySelector("button[aria-checked=true]")?.focus();
+}
+function closeReading() {
+  if (!readingPop) return;
+  readingPop.hidden = true;
+  $("#themeBtn").setAttribute("aria-expanded", "false");
+  document.removeEventListener("pointerdown", outside, true);
+  document.removeEventListener("keydown", onEsc, true);
+}
+const outside = (e) => { if (!readingPop.contains(e.target) && !e.target.closest("#themeBtn")) closeReading(); };
+const onEsc = (e) => { if (e.key === "Escape") { e.preventDefault(); closeReading(); $("#themeBtn").focus(); } };
+addEventListener("hashchange", () => closeReading());
+
 /* ---------- boot ---------- */
 async function boot() {
   // The language button shows the language you can switch to.
   const langBtn = $("#langBtn");
   langBtn.textContent = getLang() === "en" ? "中" : "EN";
   langBtn.onclick = () => { setLang(getLang() === "en" ? "zh" : "en"); location.reload(); };
-  $("#themeBtn").onclick = () => {
-    const root = document.documentElement;
-    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-    root.dataset.theme = dark ? "light" : "dark";
-    store.set("pc-theme", root.dataset.theme);
-  };
+  $("#themeBtn").onclick = () => openReading();
   $("#lockBtn").onclick = async () => {
     if (state.gh.unlocked) {
       if (await confirmDialog("锁定编辑？", "锁定后需要重新输入密码才能编辑。", "锁定")) { lock(); toast("已锁定。"); route(); }
     } else if (await ensureUnlocked()) route();
   };
   $("#searchBtn").onclick = () => palette.open();
+  const modeSwitch = $(".mode-switch");
+  modeSwitch.addEventListener("scroll", () => fitModeSwitch(false), { passive: true });
+  [modeSwitch, ...modeSwitch.children].forEach((el) => modeSwitchWatch.observe(el));
   startEnhancements();
   ["pointerdown", "keydown"].forEach((t) => addEventListener(t, () => (state.lastActive = Date.now()), { passive: true }));
   setInterval(() => {

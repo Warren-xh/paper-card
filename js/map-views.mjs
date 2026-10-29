@@ -119,9 +119,9 @@ export function createMaps(ctx) {
       ? `<p class="empty">没有找到匹配的导图。</p>`
       : maps.map((x) => `
         <a class="pcard map-tile" href="#/map/${h(x.id)}">
+          <div class="pcard-top"><span class="meta">${x.nodes} 个分支${x.cards ? ` · 论文 ${x.cards}` : ""}${x.logs ? ` · 实操 ${x.logs}` : ""}${x.courses ? ` · 课程 ${x.courses}` : ""}</span><span class="meta">${h((x.updatedAt || "").slice(0, 10))}</span></div>
           <p class="pcard-one">${h(x.title || "未命名导图")}</p>
           ${x.branches.length ? `<div class="chips">${x.branches.map((b) => `<span class="chip">${h(b)}</span>`).join("")}</div>` : ""}
-          <div class="pcard-foot"><span>${x.nodes} 个分支${x.cards ? ` · 论文 ${x.cards}` : ""}${x.logs ? ` · 实操 ${x.logs}` : ""}${x.courses ? ` · 课程 ${x.courses}` : ""}</span><span class="prog">${h((x.updatedAt || "").slice(0, 10))}</span></div>
         </a>`).join("");
   }
 
@@ -178,7 +178,7 @@ export function createMaps(ctx) {
           <a class="btn quiet" href="#/map">← 全部导图</a>
           <h1 class="map-title" id="mapTitle"></h1>
           <div class="map-find"><input type="search" class="input" id="mapFind" placeholder="在图中查找…" aria-label="在图中查找" autocomplete="off"><span class="muted small" id="findCount" aria-live="polite"></span></div>
-          <div class="seg map-mode" role="group" aria-label="模式"><button type="button" data-mode="browse">浏览</button><button type="button" data-mode="edit">编辑</button></div>
+          <div class="seg map-mode" role="group" aria-label="模式"><button type="button" data-mode="browse">浏览</button><button type="button" data-mode="edit">编辑</button><button type="button" data-mode="outline">大纲</button></div>
           <div class="btn-row map-actions">
             <button class="btn quiet small" id="undoBtn" title="撤销（⌘/Ctrl + Z）" data-edit>撤销</button>
             <button class="btn quiet small" id="redoBtn" title="重做（⌘/Ctrl + Shift + Z）" data-edit>重做</button>
@@ -195,6 +195,7 @@ export function createMaps(ctx) {
             <div class="map-legend" aria-hidden="true"><span class="lg lg-text">文字</span><span class="lg lg-card">论文</span><span class="lg lg-log">实操</span><span class="lg lg-course">课程</span></div>
             <p class="map-tip" id="mapTip"></p>
           </div>
+          <div class="map-outline" id="outline"></div>
           <aside class="map-panel" id="panel" data-edit></aside>
         </div>
       </div>`;
@@ -246,12 +247,12 @@ export function createMaps(ctx) {
       $("#redoBtn").disabled = !redo.length;
       $("#mapTip").textContent = mode === "browse"
         ? "拖动空白处移动画布，滚轮或双指缩放；点论文、实操分支可以打开。"
-        : "点分支选中；Tab 加子分支，Enter 加同级，Delete 删除；把分支拖到另一个分支上可以移动。";
+        : mode === "edit" ? "点分支选中；Tab 加子分支，Enter 加同级，Delete 删除；把分支拖到另一个分支上可以移动。" : "";
     }
     $$(".map-mode [data-mode]").forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
     function setMode(next) {
       mode = next;
-      history.replaceState(null, "", "#/map/" + id + (mode === "edit" ? "/edit" : ""));
+      history.replaceState(null, "", "#/map/" + id + (mode === "edit" ? "/edit" : mode === "outline" ? "/outline" : ""));
       paintBar();
       render();
       if (mode === "edit") paintPanel();
@@ -274,6 +275,7 @@ export function createMaps(ctx) {
 
     // Lays the map out, keeping the node at `anchor` where it was on screen.
     function render(anchor = selected) {
+      if (mode === "outline") return renderOutline();
       const colors = MM.branchColors(map.root);
       const rows = [];
       const visit = (n, depth) => {
@@ -351,6 +353,7 @@ export function createMaps(ctx) {
       applyCam();
     }
     function center(nid) {
+      if (mode === "outline") return outlineEl.querySelector(`[data-id="${nid}"]`)?.scrollIntoView({ block: "center" });
       const p = worldPos(nid);
       if (!p) return;
       cam.x = canvas.clientWidth / 2 - p.x * cam.z;
@@ -693,6 +696,159 @@ export function createMaps(ctx) {
     findBox.addEventListener("keydown", (e) => {
       if (ctx.plainEnter(e)) { e.preventDefault(); jump(e.shiftKey ? -1 : 1); }
       else if (e.key === "Escape") { findBox.value = ""; runFind(); canvas.focus(); }
+    });
+
+    /* ----- outline: the same branches as an indented list to type into ----- */
+    const outlineEl = $("#outline");
+    let pendingSnap = null;
+    function rowHtml(n, depth, colors) {
+      const link = linked(n);
+      const shut = collapsed.has(n.id);
+      const kids = n.children.length;
+      return `<li class="ol-item c-${colors.get(n.id) || "root"}${depth === 0 ? " ol-root" : ""}${hits.includes(n.id) ? " hit" : ""}" data-id="${n.id}">
+        <div class="ol-row">
+          ${kids ? `<button type="button" class="ol-fold" data-fold="${n.id}" aria-expanded="${!shut}" aria-label="${shut ? "展开" : "折叠"}">${shut ? "▸" : "▾"}</button>` : `<span class="ol-fold" aria-hidden="true"></span>`}
+          <span class="ol-dot" aria-hidden="true"></span>
+          ${n.kind === "text"
+            ? `<textarea class="ol-text grow" rows="1" aria-label="${depth === 0 ? "中心主题" : "分支"}" placeholder="${depth === 0 ? "中心主题" : "写点什么"}">${h(n.text)}</textarea>`
+            : `<span class="ol-link k-${n.kind}" tabindex="0" role="textbox" aria-readonly="true"><span class="mkind">${MM.KINDS[n.kind]}</span>${h(link?.title || "（已删除）")}</span>`}
+          ${n.note ? `<span class="mnote" title="${h(n.note)}" aria-label="有备注">✎</span>` : ""}
+          ${shut ? `<span class="ol-more">${countHidden(n)}</span>` : ""}
+        </div>
+        ${kids && !shut ? `<ul>${n.children.map((c) => rowHtml(c, depth + 1, colors)).join("")}</ul>` : ""}
+      </li>`;
+    }
+    function renderOutline(focusId = null, caret = "end") {
+      outlineEl.innerHTML = `<ul class="ol-tree">${rowHtml(map.root, 0, MM.branchColors(map.root))}</ul>
+        <p class="hint small ol-tip">Enter 新的一行，Tab 缩进一级，Shift+Tab 提出一级，↑↓ 换行，Alt+↑↓ 调整顺序，空行按 Backspace 删除。粘贴多行文字（可以带缩进或 - 列表）会自动变成分支。</p>`;
+      if (focusId) focusRow(focusId, caret);
+    }
+    const rows = () => $$(".ol-text, .ol-link", outlineEl);
+    const rowId = (el) => el.closest("[data-id]")?.dataset.id;
+    function focusRow(nid, caret = "end") {
+      const el = outlineEl.querySelector(`[data-id="${nid}"] > .ol-row > .ol-text, [data-id="${nid}"] > .ol-row > .ol-link`);
+      if (!el) return;
+      el.focus();
+      if (el.setSelectionRange) { const p = caret === "start" ? 0 : typeof caret === "number" ? caret : el.value.length; el.setSelectionRange(p, p); }
+      el.scrollIntoView({ block: "nearest" });
+    }
+    // Typing in a row: one undo step per visit to the row.
+    outlineEl.addEventListener("focusin", (e) => { const nid = rowId(e.target); if (nid) { selected = nid; pendingSnap = snapshot(); } });
+    outlineEl.addEventListener("input", (e) => {
+      if (!e.target.matches(".ol-text")) return;
+      const hit = MM.find(map.root, rowId(e.target));
+      if (!hit) return;
+      if (pendingSnap) { undo.push(pendingSnap); if (undo.length > 100) undo.shift(); redo.length = 0; pendingSnap = null; }
+      hit.node.text = e.target.value;
+      if (hit.node.id === "root") { map.title = e.target.value.trim(); paintBar(); }
+      changed();
+    });
+    outlineEl.addEventListener("click", (e) => {
+      const f = e.target.closest(".ol-fold[data-fold]");
+      if (!f) return;
+      const nid = f.dataset.fold;
+      collapsed.has(nid) ? collapsed.delete(nid) : collapsed.add(nid);
+      saveView();
+      renderOutline(nid);
+    });
+    const structural = (fn, focusId, caret) => {
+      const before = snapshot();
+      let ok;
+      try {
+        ok = fn();
+        if (MM.countNodes(map.root) > MM.MAX_NODES) throw new Error("一张导图最多 " + MM.MAX_NODES + " 个分支。");
+      } catch (error) {
+        map = MM.normalizeMap(JSON.parse(before));
+        renderOutline(selected);
+        return toast(error.message, "error");
+      }
+      if (ok === false) return;
+      undo.push(before);
+      if (undo.length > 100) undo.shift();
+      redo.length = 0;
+      pendingSnap = null;
+      changed();
+      renderOutline(typeof focusId === "function" ? focusId() : focusId, caret);
+    };
+    outlineEl.addEventListener("keydown", (e) => {
+      const el = e.target.closest(".ol-text, .ol-link");
+      if (!el || e.isComposing || e.keyCode === 229) return;
+      const nid = rowId(el);
+      const hit = MM.find(map.root, nid);
+      if (!hit) return;
+      const isText = el.matches(".ol-text");
+      const at = isText ? el.selectionStart : 0;
+      const value = isText ? el.value : "";
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? restore(redo, undo) : restore(undo, redo); return focusRow(selected); }
+      if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); restore(redo, undo); return focusRow(selected); }
+      if (e.key === "Enter" && ctx.plainEnter(e) && !mod) {
+        e.preventDefault();
+        const node = MM.newNode();
+        return structural(() => {
+          if (nid === "root" || (hit.node.children.length && !collapsed.has(nid) && at >= value.length)) { collapsed.delete(nid); return MM.addChild(map.root, nid, node, 0); }
+          if (isText && at === 0 && value) return MM.addChild(map.root, hit.parent.id, node, hit.index);
+          if (isText && at < value.length) { node.text = value.slice(at).trimStart(); hit.node.text = value.slice(0, at).trimEnd(); }
+          return MM.addSibling(map.root, nid, node);
+        }, () => (isText && at === 0 && value ? nid : node.id), "start");
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        if (nid === "root") return;
+        return structural(() => {
+          const ok = e.shiftKey ? MM.outdentNode(map.root, nid) : MM.indentNode(map.root, nid);
+          if (ok && !e.shiftKey) collapsed.delete(MM.find(map.root, nid).parent.id);
+          return ok;
+        }, nid, at);
+      }
+      if (e.key === "Backspace" && isText && !value && nid !== "root" && !hit.node.children.length) {
+        e.preventDefault();
+        const list = rows();
+        const prev = rowId(list[list.indexOf(el) - 1]) || hit.parent.id;
+        return structural(() => !!MM.removeNode(map.root, nid), prev, "end");
+      }
+      if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        return structural(() => MM.moveAmongSiblings(map.root, nid, e.key === "ArrowUp" ? -1 : 1), nid, at);
+      }
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.shiftKey && !mod) {
+        const multi = isText && el.offsetHeight > 44;
+        const edge = !isText || (e.key === "ArrowUp" ? at === 0 : at >= value.length);
+        if (multi && !edge) return;
+        const list = rows();
+        const next = list[list.indexOf(el) + (e.key === "ArrowUp" ? -1 : 1)];
+        if (next) { e.preventDefault(); focusRow(rowId(next), e.key === "ArrowUp" ? "end" : "start"); }
+      }
+      if (e.key === "Escape") el.blur();
+    });
+    // Several lines pasted at once become several branches (indentation is kept).
+    outlineEl.addEventListener("paste", (e) => {
+      const el = e.target.closest(".ol-text");
+      const text = e.clipboardData?.getData("text/plain") || "";
+      if (!el || !/\n/.test(text.trim())) return;
+      const list = MM.parseOutline(text);
+      if (!list.length) return;
+      e.preventDefault();
+      const nid = rowId(el);
+      let last = nid;
+      let count = 0;
+      structural(() => {
+        const hit = MM.find(map.root, nid);
+        let rest = list;
+        if (nid !== "root" && !hit.node.text.trim()) {
+          hit.node.text = list[0].text;
+          hit.node.children.push(...MM.outlineNodes(list[0].children));
+          count += 1 + MM.outlineNodes(list[0].children).reduce((t, c) => t + MM.countNodes(c), 0);
+          rest = list.slice(1);
+        }
+        for (const n of MM.outlineNodes(rest)) {
+          if (nid === "root") MM.addChild(map.root, "root", n);
+          else MM.addSibling(map.root, last, n);
+          last = n.id;
+          count += MM.countNodes(n);
+        }
+      }, () => last, "end");
+      if (count) toast(`已添加 ${count} 个分支。`);
     });
 
     $("#undoBtn").onclick = () => restore(undo, redo);

@@ -1,6 +1,7 @@
 // Practice logs (实操记录): a lighter companion to paper cards for coding and
 // training sessions. One log per session, kept in data/logs/<id>.json.
 import { validDate, todayISO, normalizeTags, validId, makeId, safeUrl, stripMd, sortBy } from "./model.mjs";
+import { normalizeLinks } from "./ghlinks.mjs";
 
 export const LOG_DIR = "data/logs/";
 export const LOGS_INDEX_PATH = "data/logs-index.json";
@@ -119,6 +120,7 @@ export function emptyLog(id = "") {
     next: "",
     papers: [],
     files: [],
+    github: [],
     notes: "",
     createdAt: "",
     updatedAt: "",
@@ -157,6 +159,7 @@ export function normalizeLog(raw) {
     .filter((f) => f && validFilePath(f.path) && !seen.has(f.path) && seen.add(f.path))
     .map((f) => ({ path: f.path, size: Number.isFinite(f.size) && f.size >= 0 ? Math.round(f.size) : null }))
     .slice(0, 500);
+  l.github = normalizeLinks(raw.github);
   l.notes = str(raw.notes);
   l.createdAt = str(raw.createdAt, 40);
   l.updatedAt = str(raw.updatedAt, 40);
@@ -171,6 +174,7 @@ export function plainText(l) {
     l.title, l.project, l.tags.join(" "), l.env, l.goal,
     l.steps.map((s) => s.text + " " + s.answer).join(" "),
     l.files.map((f) => f.path.split("/").pop()).join(" "),
+    l.github.map((u) => u.replace("https://github.com/", "")).join(" "),
     l.conclusion, stripMd(l.fixes), stripMd(l.code), stripMd(l.results), stripMd(l.next), stripMd(l.notes),
   ]
     .join(" ")
@@ -302,6 +306,7 @@ export function logToMarkdown(l, paperTitles = new Map()) {
   sec("关键代码 / 命令", l.code);
   sec("结果", l.results);
   sec("下次要做", l.next);
+  if (l.github.length) out.push("## GitHub 提交\n" + l.github.map((u) => "- " + u).join("\n"));
   if (l.files.length) out.push("## 代码文件\n" + l.files.map((f) => "- " + f.path + (f.size != null ? "（" + formatSize(f.size) + "）" : "")).join("\n"));
   if (l.papers.length) out.push("## 相关论文\n" + l.papers.map((id) => "- " + (paperTitles.get(id) || id)).join("\n"));
   sec("笔记", l.notes);
