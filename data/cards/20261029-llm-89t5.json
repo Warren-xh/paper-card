@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "id": "20261029-llm-89t5",
+  "title": "LLM 驱动的自主智能体",
+  "authors": "lilian weng",
+  "year": 2023,
+  "venue": "",
+  "link": "https://lilianweng.github.io/posts/2023-06-23-agent/",
+  "pdf": "",
+  "pdfName": "",
+  "tags": [
+    "介绍"
+  ],
+  "project": "",
+  "readDate": "2026-10-29",
+  "status": "reading",
+  "doneAt": "",
+  "why": "如何构建 Agent，搭建出自己规划，记忆，调用工具完成任务的智能体",
+  "marks": [
+    {
+      "type": "✎",
+      "page": "",
+      "text": "LLM 不止于写出文章程序，他也可以被看作一个强大的通用问题求解器",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "1",
+      "text": "Planing: 子目标分解，把大任务拆成小的子目标 并对过去的行动进行自我批评和反思",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "Memory：短期记忆，所有上下文学习都可以看作利用模型的短期记忆进行学习。 长期记忆：让智能体在长时间保存并回忆，通常借助外部储存和快速检索实现",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "工具使用： 能调用外部 API，获取模型权重中缺失的额外信息，比如最新信息",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "![截图](uploads/2026-10/20261029-zh7c3h.webp)",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "组件一：规划 智能体首先要知道一个复杂任务包含哪些步骤，并提前做好规划",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "[[CoT]], [[思维树]]，任务分解的做法。 1.由LLM 通过简单提示完成，如 Steps for... 2.使用针对具体任务的指令 3.由人来提供输入",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "也可以用 LLM+P 依靠外部经典规划器来做长程规划，用规划领域定义语言作为中间接口: LLM 问题翻译成 问题 [[PDDL]]， 接着请求经典规划器生成一个 PDDL 计划 ，再把 PDDL 计划翻译回自然语言。",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "ReAct 的提示模版给 LLM 安排了思考步骤 Thought： Action：Observation： 重复多次 ![截图](uploads/2026-10/20261029-2ah8j4.webp)  HotpotQA 是知识密集型任务 Alfworld 是决策类任务 在这两项任务中 ReAct 显著比仅Thought 表现的好",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "!",
+      "page": "",
+      "text": "[[CoH]]， 人类反馈的数据通常为某个集合，包括 x 提示，y 模型输出内容，r 人类的评分，z 人类的后见反馈， 拼凑成一条训练序列，最后以最好的结果收尾 为了避免过拟合，CoH 加入了一个正则项，由于最大化预训练，避免照抄，训练时会随机遮盖部分词元。Coh 是把一段依次改进的输出历史放进上下文，训练模型顺着这个趋势产生更好的输出。",
+      "answer": "",
+      "solve": false
+    }
+  ],
+  "solved": "",
+  "oneLine": "",
+  "pain": "",
+  "idea": "",
+  "proof": {
+    "datasets": "",
+    "baselines": "",
+    "numbers": ""
+  },
+  "doubts": "",
+  "relevance": "",
+  "links": [],
+  "linkNote": "",
+  "notes": "",
+  "srs": null,
+  "reviews": [],
+  "createdAt": "2026-10-29T18:00:19.724Z",
+  "updatedAt": "2026-10-29T18:00:19.724Z"
+}
