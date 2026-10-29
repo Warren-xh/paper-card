@@ -427,9 +427,13 @@ export function sortBy(list, rules) {
   });
 }
 
+// Fields taken out of the editors in v4.6 stay visible only where they already hold something.
+export const unusedAttr = (...values) =>
+  values.some((v) => (Array.isArray(v) ? v.length : v != null && String(v).trim() !== "")) ? "" : " hidden";
+
 export const CARD_SORTS = Object.freeze([
   ["read", "阅读日期：新→旧"], ["read-asc", "阅读日期：旧→新"], ["updated", "最近修改"], ["title", "标题 A→Z"],
-  ["year", "发表年份：新→旧"], ["open", "待解决最多"], ["due", "下次回顾最近"],
+  ["year", "发表年份：新→旧"], ["open", "待解决最多"],
 ]);
 
 export function sortCards(list, key = "read") {

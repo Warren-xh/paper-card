@@ -360,7 +360,7 @@ export function createLab(ctx) {
     main.innerHTML = `
       <div class="toolbar">
         <a class="btn quiet" href="${existing ? "#/lab/e/" + h(id) : "#/lab"}">← 返回</a>
-        <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="edit">编辑</button><button role="tab" aria-selected="false" data-tab="preview">预览</button></div>
+        
       </div>
       ${restored ? `<div class="banner warn"><span>已恢复这台设备上还没保存的草稿。</span><button class="btn quiet" id="discardDraft">放弃草稿</button></div>` : ""}
       ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，保存时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
@@ -368,8 +368,8 @@ export function createLab(ctx) {
         <label class="field"><span class="visually-hidden">标题</span><input class="title-input" name="title" placeholder="这次做了什么"></label>
         <div class="meta-grid">
           <label class="field"><span>日期</span><input name="date" type="date"></label>
-          <label class="field"><span>用时（小时）</span><input name="hours" type="number" min="0" max="200" step="0.5" inputmode="decimal" placeholder="可以留空"></label>
-          <label class="field"><span>项目</span><input name="project" list="lprojList" placeholder="可以留空"></label>
+          <label class="field"${M.unusedAttr(log.hours)}><span>用时（小时）</span><input name="hours" type="number" min="0" max="200" step="0.5" inputmode="decimal" placeholder="可以留空"></label>
+          <label class="field"${M.unusedAttr(log.project)}><span>项目</span><input name="project" list="lprojList" placeholder="可以留空"></label>
           <label class="field"><span>标签</span><input name="tags" list="ltagList" placeholder="用逗号分开"></label>
           <label class="field"><span>环境 / 工具</span><input name="env" placeholder="语言、框架、硬件等"></label>
           <label class="field"><span>代码链接</span><input name="link" placeholder="仓库、提交或笔记本的网址"></label>
@@ -381,7 +381,7 @@ export function createLab(ctx) {
           <ul class="file-edit" id="fileList"></ul>
           <p class="hint small">文件马上存进 GitHub 仓库的 code/ 文件夹，之后在记录页可以查看和下载；同名文件再传会覆盖。仓库是公开的，会自动跳过 .env、密钥文件、node_modules、.git 等。单个文件最大 25 MB，一次最多 200 个文件、共 100 MB。</p>
           <input type="file" id="filePick" multiple hidden><input type="file" id="folderPick" webkitdirectory multiple hidden></div>
-        <div class="pdf-field"><label class="label" for="ghInput">GitHub 提交</label>
+        <div class="pdf-field"${M.unusedAttr(log.github)}><label class="label" for="ghInput">GitHub 提交</label>
           <div class="input-btn"><input id="ghInput" placeholder="提交、PR、对比或仓库的网址" autocomplete="off"><button type="button" class="btn small" id="ghAdd">关联</button></div>
           <ul class="gh-chosen" id="ghList"></ul>
           <p class="hint small">记录页会显示每次提交改了哪些文件、改了哪几行。贴仓库地址可以从最近的提交里挑。公开仓库直接可用。</p></div>
@@ -406,11 +406,11 @@ export function createLab(ctx) {
           <div class="esec"><h3>问题与解决</h3><p class="hint">勾了「待解决」的记录列在这里，写下怎么解决的；没解决就留空。</p>
             <p class="small" id="fixCount"></p>
             <ol class="solve-list" id="fixList"></ol>
-            <textarea class="textarea" name="fixes" rows="3" placeholder="其他遇到的问题和解决办法" style="margin-top:10px"></textarea>${tools("fixes")}</div>
+            <div${M.unusedAttr(log.fixes)}><textarea class="textarea" name="fixes" rows="3" placeholder="其他遇到的问题和解决办法" style="margin-top:10px"></textarea>${tools("fixes")}</div></div>
           <div class="esec"><h3>关键代码 / 命令</h3><p class="hint">值得留下的代码或命令，直接粘贴即可。</p>
             <textarea class="textarea code" name="code" rows="6" spellcheck="false" placeholder="代码或命令"></textarea></div>
-          <div class="esec"><h3>结果</h3><textarea class="textarea" name="results" rows="3" placeholder="指标、输出、截图"></textarea>${tools("results", true)}</div>
-          <div class="esec"><h3>下次要做</h3><textarea class="textarea" name="next" rows="3" placeholder="接下来要做或要改的"></textarea>${tools("next")}</div>
+          <div class="esec"${M.unusedAttr(log.results)}><h3>结果</h3><textarea class="textarea" name="results" rows="3" placeholder="指标、输出、截图"></textarea>${tools("results", true)}</div>
+          <div class="esec"${M.unusedAttr(log.next)}><h3>下次要做</h3><textarea class="textarea" name="next" rows="3" placeholder="接下来要做或要改的"></textarea>${tools("next")}</div>
           <div class="esec"><h3>相关论文</h3><p class="hint">这次实践对应的论文卡片，两边都会显示。</p>
             <div class="link-chosen" id="paperChosen"></div>
             ${state.index.cards.length ? `<div class="link-search"><input class="input" id="paperSearch" placeholder="输入论文标题或关键词…" autocomplete="off" aria-label="搜索论文卡片"><div class="link-results" id="paperResults"></div></div>` : `<p class="muted small">还没有论文卡片。</p>`}</div>
@@ -420,7 +420,6 @@ export function createLab(ctx) {
           <p class="hint">任何想记的，支持 Markdown、公式 $…$ 和图片。</p>
           <textarea class="textarea" name="notes" rows="5"></textarea>${tools("notes", true)}</section>
       </form>
-      <div class="sheet" id="preview" hidden></div>
       <div class="editor-bar">
         <div class="bar-state"><b id="progress"></b><span class="save-state" id="saveState">${restored ? "草稿已恢复" : "草稿自动保存在这台设备"}</span></div>
         <div class="btn-row">
@@ -727,21 +726,6 @@ export function createLab(ctx) {
       ctx.setDirty(false);
       ctx.route();
     });
-
-    $$("[data-tab]").forEach((tab) => (tab.onclick = () => {
-      const preview = tab.dataset.tab === "preview";
-      $$("[data-tab]").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
-      form.hidden = preview;
-      const box = $("#preview");
-      box.hidden = !preview;
-      if (preview) {
-        const l = collect();
-        box.innerHTML = headHtml(l) + bodyHtml(l, images);
-        bindFiles(box, l);
-        bindGitHub(box, l);
-        typesetMath(box);
-      }
-    }));
 
     $("#publish").onclick = async () => {
       const draftLog = collect();

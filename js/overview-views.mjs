@@ -75,7 +75,6 @@ export function createOverview(ctx) {
     const cs = M.stats(cards, today);
     const ls = L.stats(logs);
     const ks = C.stats(courses);
-    const next = M.nextReview(cards, today);
     const going = O.continueCourses(courses);
     const open = { card: cs.questions || 0, log: ls.open || 0, course: ks.open || 0 };
     const openTotal = open.card + open.log + open.course;
@@ -85,9 +84,6 @@ export function createOverview(ctx) {
     const name = state.site.author ? "，" + state.site.author : "";
 
     const todo = [];
-    todo.push(cs.due
-      ? `<a class="todo-tile t-review hot" href="#/review"><span class="tt-icon">${icon("review")}</span><span class="tt-main"><b>${cs.due} 张卡片该回顾</b><small>先回想，再看答案</small></span><span class="tt-go">开始 →</span></a>`
-      : `<div class="todo-tile t-review"><span class="tt-icon">${icon("review")}</span><span class="tt-main"><b>今天没有要回顾的</b><small>${next ? `下一次：${+next.date.slice(5, 7)} 月 ${+next.date.slice(8)} 日（${next.count} 张）` : "卡片标成「读完」后会提醒回顾"}</small></span></div>`);
     for (const c of going.slice(0, 2))
       todo.push(`<a class="todo-tile t-course" href="#/course/${h(c.id)}${c.nextId ? "/l/" + h(c.nextId) : ""}"><span class="tt-icon">${kindIcon("course")}</span><span class="tt-main"><b>继续：${h(c.next || "下一课")}</b><small>${h(c.title)} · 已看 ${c.done} / ${c.lessons} 课</small><span class="progress"><span style="width:${Math.round((c.done / c.lessons) * 100)}%"></span></span></span><span class="tt-go">上课 →</span></a>`);
     for (const l of doing.slice(0, going.length ? 1 : 2))

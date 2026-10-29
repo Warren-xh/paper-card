@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.5** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.6** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -32,7 +32,7 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 
 **Today — overview** (🏠, or the site name at the top left)
 
-- What is waiting today: cards to review, the lesson to continue, practice in progress and open questions in every module.
+- What is waiting today: the lesson to continue, practice in progress and open questions in every module.
 - A **study calendar**: how many times you saved on the site each day over the last six months, like GitHub's contribution graph, with your current streak.
 - Quick starts and recent changes.
 
@@ -41,9 +41,7 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 - Select a word in any notes box and click **Term** next to bold and italic; add the Chinese and English names and an explanation, and it goes into the library.
 - Marked words get a dotted underline; point at them (or tap on a phone) to see the names and explanation.
 - The library page searches, sorts, edits and deletes terms, and lists the papers, logs and lessons each term appears in.
-- When you write a library term without marking it, the save bar offers to mark it; while reading, the first mention of each term is marked automatically.
-
-**Practice logs can link GitHub commits**: paste a commit, PR or repository address and the log page shows which files and lines changed.
+- While reading, the first mention of each library term is marked automatically.
 
 **Outline mode for mind maps**: build a map like a list (Enter, Tab, Shift+Tab); pasting indented text creates branches.
 
@@ -59,27 +57,26 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
   1. **Before reading**: one line on why you're reading it.
   2. **While reading**: quick marks only — `?` unclear, `!` key point, `★` reusable, `×` questionable, `✎` note — with a page counter you step with ＋/−. Tick **Open** on anything still unclear.
   3. **First-pass answers**: answer the marks you ticked Open.
-  4. **After reading, with the paper closed**: one-liner, problem, key idea, evidence, doubts / limits, why it matters to you, links to other cards.
+  4. **After reading, with the paper closed**: one-liner, problem, key idea, evidence, doubts / limits, why it matters to you.
 - Upload the paper's PDF and download it from the card page; insert images, write formulas (`$…$`), use bold and italics.
 - **Recall mode** blurs a card so you recall each part before revealing it.
-- **Spaced review**: once a card is marked Finished, it comes up for review the next day; each time you remember it, the gap grows 1 → 7 → 30 → 90 → 180 days.
 
 **Lab — practice logs**
 
-- Log coding, experiments and exercises: a goal at the start; quick timestamped entries while working (`▶` action, `✗` error, `✓` success, `?` question, `✎` note); then a conclusion, problems & fixes, key code, results and next steps.
+- Log coding, experiments and exercises: a goal at the start; quick timestamped entries while working (`▶` action, `✗` error, `✓` success, `?` question, `✎` note); then a conclusion, problems & fixes and key code.
 - Upload code files or a whole folder, then view and download them on the page; `.env` files, keys, `node_modules` and similar are skipped automatically.
 - Link logs to paper cards; the card page shows its related practice logs.
 
 **Courses — course notes**
 
-- A course holds its lessons: teacher / platform, link and why you're taking it. Add all lessons at once (one per line) and reorder them any time.
+- A course holds its lessons and why you're taking it. Add all lessons at once (one per line) and reorder them any time.
 - The course page lists “Lesson 1, Lesson 2, …”; open any lesson for:
   - **While watching**: one entry at a time, like a paper's marks — pick a symbol (didn't get it / key point / useful / note), add the video time (optional), write a few words and press Enter; on the lesson page, click a time and the video jumps there.
   - **Questions & answers**: entries ticked “Open” are listed here for their answers.
   - **Exercises**: homework for the lesson, exercises you found, and how you did them.
   - **Slides & materials**: upload slide PDFs, PPTs, handouts, images and more (or drag them in); open or download them from the lesson page, with images shown as thumbnails.
   - **Afterwards**: a one-line summary; anything that doesn't fit as entries (code, tables) goes in **Other notes**.
-- The course page shows a progress bar and the lesson list — click a circle to mark a lesson watched; **Continue** jumps to the next unwatched lesson. Write your takeaways when you finish.
+- The course page shows a progress bar and the lesson list — click a circle to mark a lesson watched; **Continue** jumps to the next unwatched lesson.
 
 **Maps — mind maps**
 
@@ -181,7 +178,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.5"
+git commit -m "Paper Cards v4.6"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -244,7 +241,7 @@ Every save is a Git commit, so GitHub keeps the full history. You can also downl
 | Path | Contents |
 | --- | --- |
 | `data/cards/<id>.json` | One card per paper |
-| `data/index.json` | Card summaries for the home page, search and review |
+| `data/index.json` | Card summaries for the home page and search |
 | `data/logs/<id>.json`, `data/logs-index.json` | Practice logs and their summaries |
 | `data/courses/<id>.json`, `data/courses-index.json` | Courses (with all lesson notes) and their summaries |
 | `data/maps/<id>.json`, `data/maps-index.json` | Mind maps and their summaries |
@@ -301,6 +298,7 @@ Main files:
 | `js/github.mjs` | One commit per save through the Git Data API, retried on conflicts |
 | `js/vault.mjs` | Token encryption |
 | `js/markdown.mjs` | Safe Markdown rendering |
+| `js/rich.mjs` | What-you-see-is-what-you-get edit boxes (bold, terms and images shown as they look) |
 
 ---
 

@@ -16,7 +16,7 @@ import * as PI from "./paperinfo.mjs";
 import * as R from "./reading.mjs";
 import { attachRich, fieldOf, setImageResolver } from "./rich.mjs";
 
-export const VERSION = "4.5";
+export const VERSION = "4.6";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -434,13 +434,7 @@ async function saveCard(card, message, change, extraFiles = []) {
   return saved;
 }
 
-function updateBadge() {
-  const badge = $("#dueBadge");
-  const n = M.dueCards(state.index.cards).length;
-  badge.textContent = n;
-  badge.hidden = !n;
-  badge.title = n ? "今天有 " + n + " 张该回顾" : "";
-}
+function updateBadge() {}
 
 /* ---------- unlocking ---------- */
 function saveToken(token, remember) {
@@ -541,7 +535,8 @@ async function ensureUnlocked() {
 }
 
 /* ---------- views ---------- */
-const views = { home, card: cardView, edit: editView, review: reviewView, settings: settingsView, setup: setupView };
+// Spaced review (回顾) was removed in v4.6; old #/review links land on the paper list.
+const views = { home, card: cardView, edit: editView, review: home, settings: settingsView, setup: setupView };
 const ROUTES = { c: "card", edit: "edit", new: "edit", review: "review", settings: "settings", setup: "setup" };
 
 async function route() {
@@ -688,7 +683,6 @@ const palette = createPalette({
     { label: "添加课程", hint: "课程", href: "#/course/new", keys: "new course" },
     { label: "思维导图", hint: "导图", href: "#/map", keys: "map" },
     { label: "词库", hint: state.terms.terms.length + " 个术语", href: "#/terms", keys: "terms glossary ciku" },
-    ...(M.dueCards(state.index.cards).length ? [{ label: "开始回顾", hint: M.dueCards(state.index.cards).length + " 张", href: "#/review", keys: "review" }] : []),
     { label: "设置", href: "#/settings", keys: "settings" },
     { label: "阅读设置", hint: "主题 · 字体 · 字号", run: () => openReading(), keys: "theme dark light sepia font reading zhuti ziti" },
   ],
@@ -715,15 +709,13 @@ function sortSelect(id, options, current) {
 /* Home */
 async function home() {
   state.filter.sort ||= store.get("pc-sort-cards") || "read";
+  if (!M.CARD_SORTS.some(([k]) => k === state.filter.sort)) state.filter.sort = "read";
   const today = M.todayISO();
   const cards = state.index.cards;
   const s = M.stats(cards, today);
-  const next = M.nextReview(cards, today);
   const site = state.site;
 
-  const due = s.due
-    ? `<a class="due-banner" href="#/review"><b>今天有 ${s.due} 张该回顾</b><span>先想，再看答案 →</span></a>`
-    : `<p class="due-none">${next ? `今天没有要回顾的卡片。下一次：${short(next.date)}（${next.count} 张）` : cards.length ? "今天没有要回顾的卡片。卡片标成「读完」后，第二天开始提醒回顾。" : "写下第一张卡片吧：读之前想清楚为什么读，边读边打标记，读完合上论文再写。"}</p>`;
+  const due = cards.length ? "" : `<p class="due-none">写下第一张卡片吧：读之前想清楚为什么读，边读边打标记，读完合上论文再写。</p>`;
 
   const statsHtml = cards.length
     ? `<div class="stats">
@@ -731,7 +723,6 @@ async function home() {
         <span class="stat"><b>${s.done}</b>篇读完</span>
         <span class="stat"><b>${s.reading}</b>篇在读</span>
         <span class="stat"><b>${s.thisMonth}</b>篇本月</span>
-        <span class="stat"><b>${s.reviews}</b>次回顾</span>
         ${s.questions ? `<span class="stat"><b>${s.questions}</b>条待解决</span>` : ""}
       </div>`
     : "";
@@ -807,7 +798,6 @@ function tileHtml(x, today) {
   return `<a class="pcard" href="#/c/${h(x.id)}">
     <div class="pcard-top">
       <span class="status s-${x.status}">${M.STATUS_LABELS[x.status]}</span>
-      ${M.isDue(x, today) ? `<span class="due-tag">该回顾</span>` : ""}
       ${x.pdf ? `<span class="pdf-tag" title="附有论文 PDF">PDF</span>` : ""}
       ${x.questions ? `<span class="qbadge" title="还有 ${x.questions} 条待解决">待解决 ${x.questions}</span>` : ""}
     </div>
@@ -902,17 +892,6 @@ function headHtml(c) {
     ${c.why ? `<p class="why"><b>为什么读：</b>${h(c.why)}</p>` : ""}`;
 }
 
-function reviewsHtml(c) {
-  if (c.status !== "done") return "";
-  const next = c.srs?.due;
-  const today = M.todayISO();
-  return `<section class="section"><h2>回顾记录</h2>
-    <p class="muted small">${next ? (next <= today ? "今天该回顾了。" : `下次回顾：${longDate(next)}（${inDays(M.dayDiff(today, next))}）`) : ""}</p>
-    ${c.reviews.length ? `<ul class="review-log">${c.reviews.slice().reverse()
-      .map((r) => `<li><span>${r.date}</span><span class="grade g-${r.grade}">${M.GRADES[r.grade].label}</span>${r.next ? `<span class="muted">→ ${r.next}</span>` : ""}</li>`)
-      .join("")}</ul>` : `<p class="muted small">还没回顾过。</p>`}</section>`;
-}
-
 async function cardView(id) {
   if (!M.validId(id)) return home();
   main.innerHTML = `<p class="loading">正在打开卡片…</p>`;
@@ -939,7 +918,6 @@ async function cardView(id) {
       ${solvedHtml(c)}
       ${c.notes.trim() ? `<section class="section"><h2>自由笔记</h2><div class="md">${mdOf(null)(c.notes)}</div></section>` : ""}
       ${lab.relatedHtml(c.id)}
-      ${reviewsHtml(c)}
     </article>`;
   const page = $("#cardPage");
   const setRecall = (on) => {
@@ -960,82 +938,6 @@ async function cardView(id) {
   $("#copyMd").onclick = () => copyText(M.cardToMarkdown(c, titles));
   $$("[data-goto-tag]").forEach((a) => (a.onclick = () => { state.filter = { ...state.filter, query: "", tag: a.dataset.gotoTag, project: "", status: "" }; }));
   typesetMath(main);
-}
-
-/* ---------- review ---------- */
-async function reviewView() {
-  const today = M.todayISO();
-  const queue = M.dueCards(state.index.cards, today).map((x) => x.id);
-  const tally = { forgot: 0, fuzzy: 0, good: 0 };
-  let i = 0;
-
-  const empty = () => {
-    const next = M.nextReview(state.index.cards, today);
-    const reviewed = tally.forgot + tally.fuzzy + tally.good;
-    main.innerHTML = `<div class="sheet review-done">
-      <h1>${reviewed ? "今天的回顾做完了" : "今天没有要回顾的卡片"}</h1>
-      ${reviewed ? `<p>回顾了 ${reviewed} 张：想起来 ${tally.good} 张，有点模糊 ${tally.fuzzy} 张，忘了 ${tally.forgot} 张。忘了的明天会再出现。</p>` : `<p class="muted">卡片标成「读完」后，第二天开始提醒回顾；之后想得起来，间隔就会越来越长（1 → 7 → 30 → 90 → 180 天）。</p>`}
-      ${next ? `<p class="muted">下一次：${longDate(next.date)}，${next.count} 张。</p>` : ""}
-      <div class="btn-row"><a class="btn primary" href="#/">回到卡片</a></div></div>`;
-  };
-
-  async function show() {
-    if (i >= queue.length) return empty();
-    main.innerHTML = `<p class="loading">正在取出下一张…</p>`;
-    const card = await getCard(queue[i]);
-    if (!card) { i++; return show(); }
-    const cite = M.citation(card);
-    main.innerHTML = `
-      <div class="toolbar"><span class="muted">第 ${i + 1} / ${queue.length} 张</span><a class="btn quiet" href="#/c/${h(card.id)}">打开卡片</a></div>
-      <article class="sheet review">
-        <h1 class="card-title">${h(card.title || "（未写标题）")}</h1>
-        ${cite ? `<p class="cite">${h(cite)}</p>` : ""}
-        <p class="review-prompt">用一句话说出它<b>用什么方法</b>、<b>解决了什么问题</b>、<b>结果如何</b>。</p>
-        <label class="field"><span class="visually-hidden">我想起来的</span>
-          <textarea class="textarea" id="recallText" rows="4" placeholder="先自己写下想起来的（只是帮你想，不会保存）"></textarea></label>
-        <div class="btn-row" style="margin-top:12px"><button class="btn primary" id="revealBtn">揭晓答案</button></div>
-        <div id="answer" hidden></div>
-      </article>`;
-    $("#recallText").focus();
-    $("#revealBtn").onclick = () => {
-      const mine = $("#recallText").value.trim();
-      $("#revealBtn").parentElement.hidden = true;
-      $("#recallText").closest(".field").hidden = true;
-      const box = $("#answer");
-      box.hidden = false;
-      const grade = (g) => {
-        const d = M.previewInterval(card, g);
-        return `<button class="btn grade-btn g-${g}" data-grade="${g}"><b>${M.GRADES[g].label}</b><small>${inDays(d)}再看</small></button>`;
-      };
-      box.innerHTML = `
-        ${mine ? `<div class="mine"><span class="label">我想起来的</span><p>${h(mine)}</p></div>` : ""}
-        ${cardBodyHtml(card)}
-        <div class="grade-bar"><span class="label">想得怎么样？</span><div class="grades">${grade("forgot")}${grade("fuzzy")}${grade("good")}</div></div>`;
-      typesetMath(box);
-      $$("[data-grade]", box).forEach((b) => (b.onclick = () => submit(card, b.dataset.grade)));
-      $(".grade-bar", box).scrollIntoView({ behavior: "smooth", block: "nearest" });
-    };
-  }
-
-  async function submit(card, grade) {
-    if (!(await ensureUnlocked())) return;
-    const buttons = $$("[data-grade]");
-    buttons.forEach((b) => (b.disabled = true));
-    try {
-      await saveCard(card, "回顾 " + (card.title || card.id).slice(0, 50) + "：" + M.GRADES[grade].label, (latest) => M.gradeCard(latest, grade, today));
-      tally[grade]++;
-      i++;
-      show();
-    } catch (error) {
-      console.error(error);
-      if (error.status === 401) lock(true);
-      toast("保存失败：" + error.message, "error");
-      buttons.forEach((b) => (b.disabled = false));
-    }
-  }
-
-  if (!queue.length) return empty();
-  return show();
 }
 
 /* ---------- editor ---------- */
@@ -1072,7 +974,7 @@ async function editView(id) {
   main.innerHTML = `
     <div class="toolbar">
       <a class="btn quiet" href="${existing ? "#/c/" + h(id) : "#/"}">← 返回</a>
-      <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="edit">编辑</button><button role="tab" aria-selected="false" data-tab="preview">预览</button></div>
+      
     </div>
     ${restored ? `<div class="banner warn"><span>已恢复这台设备上还没发布的草稿。</span><button class="btn quiet" id="discardDraft">放弃草稿</button></div>` : ""}
     ${!state.gh.unlocked ? `<div class="banner"><span>你可以先写，发布时再输入密码。草稿会自动保存在这台设备上。</span></div>` : ""}
@@ -1082,10 +984,10 @@ async function editView(id) {
       <div class="meta-grid">
         <label class="field"><span>作者</span><input name="authors" placeholder="作者姓名"></label>
         <label class="field"><span>年份</span><input name="year" type="number" min="1800" max="2200" inputmode="numeric" placeholder="发表年份"></label>
-        <label class="field"><span>会议 / 期刊</span><input name="venue" placeholder="会议或期刊名称"></label>
+        <label class="field"${M.unusedAttr(card.venue)}><span>会议 / 期刊</span><input name="venue" placeholder="会议或期刊名称"></label>
         <div class="field"><label class="label" for="cardLink">链接</label><div class="input-btn"><input id="cardLink" name="link" placeholder="DOI、arXiv 编号或网址"><button type="button" class="btn small" id="autoFill" title="填了 DOI 或 arXiv 编号：自动填写标题、作者、年份、会议；只写了标题：按标题查找论文">自动填写</button></div></div>
         <label class="field"><span>标签</span><input name="tags" list="tagList" placeholder="用逗号分开"></label>
-        <label class="field"><span>项目</span><input name="project" list="projList" placeholder="可以留空"></label>
+        <label class="field"${M.unusedAttr(card.project)}><span>项目</span><input name="project" list="projList" placeholder="可以留空"></label>
         <label class="field"><span>阅读日期</span><input name="readDate" type="date"></label>
         <div class="field"><span class="label" id="statusLabel">状态</span><div class="seg" role="group" aria-labelledby="statusLabel">
           <button type="button" data-status="reading">在读</button><button type="button" data-status="done">读完</button></div></div>
@@ -1150,7 +1052,7 @@ async function editView(id) {
           <div class="prompts"><button type="button" data-bring="relevance">带入 ★</button></div>
           <textarea class="textarea" name="relevance" rows="4"></textarea>${tools("relevance")}</div>
 
-        <div class="esec">${secHead(7, "搜索并选中相关的已有卡片，再写一句它们的区别。关联只记下对方的编号，不会多出卡片；两张卡片上都会显示。")}
+        <div class="esec"${M.unusedAttr(card.links, card.linkNote)}>${secHead(7, "搜索并选中相关的已有卡片，再写一句它们的区别。关联只记下对方的编号，不会多出卡片；两张卡片上都会显示。")}
           <div class="link-chosen" id="linkChosen"></div>
           ${others.length ? `<div class="link-search"><input class="input" id="linkSearch" placeholder="输入标题、作者或关键词找卡片…" autocomplete="off" aria-label="搜索要关联的卡片"><div class="link-results" id="linkResults"></div></div>` : `<p class="muted small">还没有其他卡片可以关联。</p>`}
           ${back.length ? `<p class="hint small" style="margin-top:6px">这些卡片已经关联了这张，会自动显示在两边，不用再选：${back.map((b) => h(b.title || b.id)).join("、")}</p>` : ""}
@@ -1161,7 +1063,6 @@ async function editView(id) {
         <p class="hint">任何想记的：公式、推导、代码、截图。支持 Markdown，公式用 $…$。</p>
         <textarea class="textarea" name="notes" rows="6"></textarea>${tools("notes", true)}</section>
     </form>
-    <div class="sheet" id="preview" hidden></div>
     <div class="editor-bar">
       <div class="bar-state"><b id="progress"></b><span class="save-state" id="saveState">${restored ? "草稿已恢复" : "草稿自动保存在这台设备"}</span></div>
       <div class="btn-row">
@@ -1514,20 +1415,6 @@ async function editView(id) {
     editorDirty = false;
     route();
   });
-
-  $$("[data-tab]").forEach((tab) => (tab.onclick = () => {
-    const preview = tab.dataset.tab === "preview";
-    $$("[data-tab]").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
-    form.hidden = preview;
-    const box = $("#preview");
-    box.hidden = !preview;
-    if (preview) {
-      const c = collect();
-      box.innerHTML = headHtml(c) + cardBodyHtml(c, images) + marksHtml(c) + solvedHtml(c, images) +
-        (c.notes.trim() ? `<section class="section"><h2>自由笔记</h2><div class="md">${mdOf(images)(c.notes)}</div></section>` : "");
-      typesetMath(box);
-    }
-  }));
 
   $("#publish").onclick = async () => {
     const draftCard = collect();

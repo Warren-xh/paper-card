@@ -3,6 +3,13 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.6 — 2026-10-29
+
+- **精简界面**，去掉用不上的功能：间隔回顾（顶栏「回顾」、首页提醒、卡片页的回顾记录）；编辑页的「编辑 / 预览」切换；保存栏的「发现未标注的术语」提示。
+  **A leaner interface**, without features that went unused: spaced review (the Review link, reminders and review history); the Edit / Preview switch in editors; the "unmarked terms" hint on the save bar.
+- 编辑时不再显示没用过的栏目：所有模块的「项目」；论文的会议 / 期刊和关联论文；课程的讲师 / 平台、课程链接和学完总结；实操的用时、GitHub 提交、其他问题、结果和下次要做。已经写过内容的栏目照常显示，数据都还在。
+  Editors no longer show fields that were never used: Project in every module; a paper's venue and linked cards; a course's teacher, link and takeaways; a log's hours, GitHub commits, other problems, results and next steps. Fields that already hold something still show, and no data is removed.
+
 ## v4.5 — 2026-10-29
 
 - **编辑框所见即所得**：加粗、斜体、术语、截图在编辑时就显示成最后的样子，不再出现 `**`、`[[ ]]`、`![截图](uploads/…)` 这些符号；粘贴的截图直接显示成图片，点一下可以整张选中删除。保存的内容和以前完全一样。

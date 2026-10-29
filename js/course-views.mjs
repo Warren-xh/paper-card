@@ -308,10 +308,10 @@ export function createCourses(ctx) {
       <form class="sheet" id="editor" autocomplete="off">
         <label class="field"><span class="visually-hidden">课程名称</span><input class="title-input" name="title" placeholder="课程名称"></label>
         <div class="meta-grid">
-          <label class="field"><span>讲师 / 平台</span><input name="teacher" placeholder="讲师、学校或平台"></label>
-          <label class="field"><span>课程链接</span><input name="link" placeholder="课程主页或播放列表的网址"></label>
+          <label class="field"${M.unusedAttr(course.teacher)}><span>讲师 / 平台</span><input name="teacher" placeholder="讲师、学校或平台"></label>
+          <label class="field"${M.unusedAttr(course.link)}><span>课程链接</span><input name="link" placeholder="课程主页或播放列表的网址"></label>
           <label class="field"><span>标签</span><input name="tags" list="ctagList" placeholder="用逗号分开"></label>
-          <label class="field"><span>项目</span><input name="project" list="cprojList" placeholder="可以留空"></label>
+          <label class="field"${M.unusedAttr(course.project)}><span>项目</span><input name="project" list="cprojList" placeholder="可以留空"></label>
           <label class="field"><span>开始日期</span><input name="startDate" type="date"></label>
           <div class="field"><span class="label" id="cstatusLabel">状态</span><div class="seg" role="group" aria-labelledby="cstatusLabel">
             ${Object.entries(C.STATUS_LABELS).map(([k, t]) => `<button type="button" data-status="${k}">${t}</button>`).join("")}</div></div>
@@ -325,7 +325,7 @@ export function createCourses(ctx) {
           <ol class="lesson-edit" id="lessonRows"></ol>
           <label class="field" style="margin-top:12px"><span>批量添加（每行一课）</span><textarea class="textarea short" id="bulkLessons" rows="3" placeholder="每行写一课的标题"></textarea></label>
           <div class="btn-row" style="margin-top:6px"><button type="button" class="btn small" id="addBulk">添加这些课时</button></div></section>
-        <section class="stage"><h2><span class="stage-n">3</span>学完总结</h2>
+        <section class="stage"${M.unusedAttr(course.summary)}><h2><span class="stage-n">3</span>学完总结</h2>
           <p class="hint">整门课学完后，写下最重要的收获。</p>
           <textarea class="textarea" name="summary" rows="5" placeholder="这门课最重要的收获"></textarea>${tools("summary")}</section>
       </form>
