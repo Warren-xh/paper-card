@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-11-02T15:10:00.449Z",
+ "updatedAt": "2026-11-02T15:11:54.418Z",
  "terms": [
   {
    "term": "过拟合",
@@ -105,6 +105,14 @@
    "def": "把推理和行动整合到 LLM 中，让 LLM 能与环境交互，比如调用维基百科搜索 API，也能让 LLM 用自然语言生成推理轨迹。",
    "createdAt": "2026-10-29T17:44:48.208Z",
    "updatedAt": "2026-10-29T17:44:48.208Z"
+  },
+  {
+   "term": "TALM",
+   "zh": "工具增强语言模型",
+   "en": "Tool Augmented Language Models",
+   "def": "通过微调语言模型，让他学会使用外部工具 API，新加入的某条 API 调用标注是否能提升模型输出的指令是指标",
+   "createdAt": "2026-11-02T15:11:54.418Z",
+   "updatedAt": "2026-11-02T15:11:54.418Z"
   },
   {
    "term": "WikiChat",
