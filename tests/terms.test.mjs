@@ -156,11 +156,11 @@ test("positions stay right when lowercasing changes a letter's length", () => {
 test("rich boxes show bold, terms and images, and keep code and formulas as written", async () => {
   const R = await import("../js/rich.mjs");
   assert.equal(R.lineHtml("在 **Pytorch** 和 *斜体* 里"), "在 <b>Pytorch</b> 和 <i>斜体</i> 里");
-  assert.equal(R.lineHtml("[[可微]] [[LLMs|LLM]]"), '<span class="term" data-md="[[可微]]" contenteditable="false">可微</span> <span class="term" data-md="[[LLMs|LLM]]" contenteditable="false">LLMs</span>');
+  assert.equal(R.lineHtml("[[可微]] [[LLMs|LLM]]"), '<span class="term" data-md="[[可微]]" data-term="可微" contenteditable="false">可微</span> <span class="term" data-md="[[LLMs|LLM]]" data-term="LLM" contenteditable="false">LLMs</span>');
   assert.match(R.lineHtml("![截图](uploads/2026-10/x.webp)"), /^<img class="rich-img" data-md="!\[截图\]\(uploads\/2026-10\/x.webp\)" src="uploads\/2026-10\/x.webp"/);
   assert.equal(R.lineHtml("`a*b*c` 和 $x*y*z$"), "`a*b*c` 和 $x*y*z$");
   assert.equal(R.lineHtml("<script>&"), "&lt;script&gt;&amp;");
-  assert.equal(R.lineHtml("**[[术语]]**"), '<b><span class="term" data-md="[[术语]]" contenteditable="false">术语</span></b>');
+  assert.equal(R.lineHtml("**[[术语]]**"), '<b><span class="term" data-md="[[术语]]" data-term="术语" contenteditable="false">术语</span></b>');
   assert.equal(R.lineHtml("![x](javascript:alert(1))"), "![x](javascript:alert(1))");
   assert.equal(R.toHtml("a\n\nb", false), "<div>a</div><div><br></div><div>b</div>");
   assert.equal(R.toHtml("a\nb", true), "a b");

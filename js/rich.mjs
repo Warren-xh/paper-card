@@ -24,8 +24,9 @@ function atom(md, groups) {
   const [, code, mathD, math, term, time, image] = groups;
   if (code || mathD || math) return null;
   if (term) {
-    const [shown] = term.slice(2, -2).split("|");
-    return `<span class="term" data-md="${h(md)}" contenteditable="false">${h(shown.trim())}</span>`;
+    // data-term names the library entry, so pointing at it shows its card (as on the page).
+    const [shown, name] = term.slice(2, -2).split("|");
+    return `<span class="term" data-md="${h(md)}" data-term="${h((name || shown).trim())}" contenteditable="false">${h(shown.trim())}</span>`;
   }
   if (time) return `<span class="time-tag" data-md="${h(md)}" contenteditable="false">${h(md.slice(1, -1))}</span>`;
   const m = image.match(/^!\[([^\]]*)\]\(([^)\s]+)/);
