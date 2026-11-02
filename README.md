@@ -4,7 +4,7 @@
 
 一个放在 GitHub Pages 上的个人学习网站：读论文写**论文卡片**，写代码、跑实验写**实操记录**，看课程写**课程笔记**，再用**思维导图**把它们串起来。不需要服务器、不需要数据库、不用花钱；在任何设备上输入密码就能写，保存后网站约 1 分钟自动更新。
 
-当前版本：**v4.6**（[版本记录](CHANGELOG.md)）· 界面默认中文，可切换英文 · [MIT 许可证](LICENSE)。
+当前版本：**v4.7**（[版本记录](CHANGELOG.md)）· 界面默认中文，可切换英文 · [MIT 许可证](LICENSE)。
 
 > **注意**：本仓库根目录下的 `data/`、`papers/`、`code/`、`materials/`、`uploads/` 是作者自己的内容。想部署自己的网站，请下载下面的**发布包**，不要直接复制或 Fork 整个仓库。
 
@@ -42,6 +42,7 @@
 - 笔记里标注过的词带虚线下划线，指上去（手机上点一下）就弹出中英文和解释。
 - 词库页可以搜索、排序、编辑、删除，并列出每个术语出现在哪些论文、实操、课时里。
 - 阅读时会自动标出每个术语第一次出现的地方。
+- **上传的资料也会关联词库**：论文 PDF、课件（PDF / PPT / Word）、代码文件上传时会读出里面的文字，自动找出提到的术语（中文名或英文名都算）。资料下方显示「提到的术语」，指上去看解释；词库里每个术语也会列出出现在哪些资料里。之后新加的术语也能在旧资料里找到。
 
 **导图的大纲模式**：像写列表一样搭导图（Enter、Tab、Shift+Tab），粘贴带缩进的文字直接变成分支。
 
@@ -176,7 +177,7 @@ unzip paper-card.zip && cd paper-card
 # 推到你在 GitHub 上新建的空仓库
 git init -b main
 git add -A
-git commit -m "文献卡片 v4.6"
+git commit -m "文献卡片 v4.7"
 git remote add origin https://github.com/你的用户名/仓库名.git
 git push -u origin main
 ```
@@ -249,6 +250,7 @@ git push -u origin main
 | `code/<记录编号>/` | 实操记录里上传的代码 |
 | `materials/<课程编号>/<课时编号>/` | 课程里每一课上传的课件和资料 |
 | `data/terms.json` | 词库（全部术语） |
+| `data/texts/` | 上传的 PDF、PPT、Word 里读出的文字（用于关联词库） |
 | `uploads/` | 插入的图片 |
 
 ## 仓库里有什么
@@ -297,6 +299,7 @@ npm run reindex       # 手动改过 data/cards/ 后重建 data/index.json
 | `js/vault.mjs` | 令牌加密 |
 | `js/markdown.mjs` | 安全的 Markdown 渲染 |
 | `js/rich.mjs` | 编辑框所见即所得（加粗、术语、图片直接显示） |
+| `js/doctext.mjs` | 读出上传资料里的文字，找出提到的术语 |
 
 ---
 

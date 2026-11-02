@@ -227,6 +227,7 @@ export function createTerms(ctx) {
           <span class="visually-hidden">搜索术语</span><input type="search" id="tq" placeholder="搜索术语、中文、英文、解释…" value="${h(query)}"></label>
         ${ctx.sortSelect("tsort", SORTS, sort)}
       </div>` : ""}
+      <div class="banner" id="termScan" hidden></div>
       <section class="term-list" id="termList" aria-label="全部术语"></section>`;
     $("#newTerm").onclick = async () => {
       const res = await editor({});
@@ -253,6 +254,32 @@ export function createTerms(ctx) {
       .filter((e) => e.kind !== "course" || !files.length);
     usage = new Map(state.terms.terms.map((t) => [T.termKey(t.term), T.usages(entries, t)]));
     if ($("#termList")) renderList(focus);
+    // Uploaded files (paper PDFs, slides, code) that mention each term.
+    const { usage: inFiles, missing } = await ctx.materialUsage(state.terms.terms).catch(() => ({ usage: new Map(), missing: [] }));
+    for (const [name, hits] of inFiles) usage.get(T.termKey(name))?.push(...hits);
+    if ($("#termList")) renderList(focus);
+    paintScan(missing, focus);
+  }
+
+  // Files uploaded before their text was read (or on another device): read them once.
+  function paintScan(missing, focus) {
+    const slot = $("#termScan");
+    if (!slot) return;
+    slot.hidden = !missing.length;
+    if (!missing.length) return;
+    slot.innerHTML = `<span>有 ${missing.length} 份资料（PDF、PPT、Word）还没读取文字，读取后才能找到里面提到的术语。</span><button type="button" class="btn small">读取</button>`;
+    $("button", slot).onclick = async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        const n = await ctx.scanMaterials(missing, (i, total) => (btn.textContent = `正在读取 ${i} / ${total}…`));
+        if (n) { toast(`已读取 ${n} 份资料。`); page(focus); } else { btn.disabled = false; btn.textContent = "读取"; toast("没有读到文字（可能是扫描版 PDF）。", "error"); }
+      } catch (error) {
+        btn.disabled = false;
+        btn.textContent = "读取";
+        toast("读取失败：" + error.message, "error");
+      }
+    };
   }
 
   function renderList(focus = "") {
@@ -277,7 +304,7 @@ export function createTerms(ctx) {
           ${used ? (used.length ? `<button type="button" class="btn quiet small" data-used aria-expanded="${k === fk}">出现在 ${used.length} 处</button>` : `<span class="muted small">笔记里还没出现</span>`) : `<span class="muted small">正在统计…</span>`}
           <span class="tc-actions"><button type="button" class="btn quiet small" data-edit>编辑</button><button type="button" class="btn quiet small danger" data-del>删除</button></span>
         </div>
-        ${used?.length ? `<ul class="tc-used"${k === fk ? "" : " hidden"}>${used.slice(0, 30).map((e) => `<li><a class="k-${e.kind}" href="${h(e.href)}"><span class="pl-kind">${S.KIND_LABELS[e.kind]}</span>${h(e.title)}</a></li>`).join("")}</ul>` : ""}
+        ${used?.length ? `<ul class="tc-used"${k === fk ? "" : " hidden"}>${used.slice(0, 30).map((e) => `<li><a class="k-${e.kind}" href="${h(e.href)}"><span class="pl-kind">${S.KIND_LABELS[e.kind]}</span>${h(e.title)}${e.kind === "file" ? `<small class="muted"> · ${h(e.sub)}${e.count > 1 ? " · " + e.count + " 次" : ""}</small>` : ""}</a></li>`).join("")}</ul>` : ""}
       </article>`;
     }).join("");
     ctx.typesetMath(box);

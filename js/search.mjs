@@ -1,7 +1,7 @@
 // Search across every module (the Ctrl+K search box): papers, practice logs,
 // courses and their lessons, and mind maps.
 
-export const KIND_LABELS = { card: "论文", log: "实操", course: "课程", lesson: "课时", map: "导图", term: "术语" };
+export const KIND_LABELS = { card: "论文", log: "实操", course: "课程", lesson: "课时", map: "导图", term: "术语", file: "资料" };
 
 const lower = (s) => String(s || "").toLowerCase();
 

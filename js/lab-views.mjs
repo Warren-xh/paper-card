@@ -206,7 +206,7 @@ export function createLab(ctx) {
         <div class="file-row"><span class="fname" title="${h(f.path)}">${h(relOf(f.path))}</span><span class="muted small">${L.formatSize(f.size)}</span>
           ${L.isTextFile(f.path) ? `<button type="button" class="btn quiet small" data-view-file="${i}" aria-expanded="false">查看</button>` : ""}
           <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(f.path.split("/").pop())}">下载</a></div>
-        <pre class="file-pre" hidden><code></code></pre></li>`).join("")}</ul></section>`;
+        ${ctx.docTermsSlot(f.path)}<pre class="file-pre" hidden><code></code></pre></li>`).join("")}</ul></section>`;
   }
 
   /* ---------- GitHub commits, pull requests and comparisons ---------- */
@@ -317,6 +317,7 @@ export function createLab(ctx) {
     bindFiles($(".log-page"), l);
     bindGitHub($(".log-page"), l);
     typesetMath(main);
+    ctx.fillDocTerms(main);
   }
 
   // Shown on a paper card's page: practice logs that list it under 相关论文.
@@ -587,9 +588,10 @@ export function createLab(ctx) {
       try {
         const out = [];
         for (const { f, rel } of chosen) out.push({ path: dir + rel, size: f.size, base64: await ctx.fileToBase64(f) });
+        const texts = await ctx.textFiles(chosen.map(({ f, rel }) => ({ path: dir + rel, file: f })));
         await state.gh.commitLatest(async () => ({
           message: `上传代码 ${out.length} 个文件` + (form.title.value ? "：" + form.title.value.slice(0, 50) : ""),
-          files: out.map(({ path, base64 }) => ({ path, base64 })),
+          files: [...out.map(({ path, base64 }) => ({ path, base64 })), ...texts],
         }));
         for (const o of out) {
           uploadedPaths.add(o.path);

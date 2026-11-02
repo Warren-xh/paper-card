@@ -1005,3 +1005,9 @@ dialog:has(.paper-picks) { width: min(640px, calc(100vw - 32px)); }
   main > * { animation: none; }
   .recall .sec-body { filter: none !important; opacity: 1 !important; }
 }
+/* Library terms mentioned inside an uploaded file (doctext.mjs). */
+.doc-terms { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 2px; font-size: 13.5px; }
+.doc-terms .dt-label { color: var(--pencil); font-size: 12.5px; margin-right: 2px; }
+.doc-terms .doc-term { padding: 1px 8px; border-radius: var(--r-pill); text-decoration: none; border: 1px solid color-mix(in srgb, var(--c-term) 30%, transparent); }
+.doc-terms .doc-term small { margin-left: 3px; color: var(--pencil); font-size: 11px; }
+.tc-used small { font-weight: 400; }

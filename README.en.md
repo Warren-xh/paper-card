@@ -4,7 +4,7 @@
 
 A personal study site that runs on GitHub Pages: write **paper cards** for what you read, **practice logs** for coding and experiments, **course notes** for courses you watch, and connect them in **mind maps**. No server, no database, no cost. Enter your password on any device to write; the site updates about a minute after you save.
 
-Current version: **v4.6** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
+Current version: **v4.7** ([changelog](CHANGELOG.md)) · [MIT License](LICENSE). The interface is in Chinese by default; click **EN** in the top bar (or **设置 → 界面语言 → English**) to switch it to English.
 
 > **Note**: `data/`, `papers/`, `code/`, `materials/` and `uploads/` at the root of this repository hold the author's own content. To run your own site, download the **release package** below — don't copy or fork the whole repository.
 
@@ -42,6 +42,7 @@ The **🏠 | Papers | Lab | Courses | Maps** switch in the top bar moves between
 - Marked words get a dotted underline; point at them (or tap on a phone) to see the names and explanation.
 - The library page searches, sorts, edits and deletes terms, and lists the papers, logs and lessons each term appears in.
 - While reading, the first mention of each library term is marked automatically.
+- **Uploaded files are linked to the library too**: when a paper PDF, slides (PDF / PPT / Word) or code files are uploaded, their text is read and the terms they mention (by Chinese or English name) are found. Each file shows **Terms mentioned** (point at one for its explanation), and each term in the library lists the files it appears in. Terms added later are found in files uploaded earlier.
 
 **Outline mode for mind maps**: build a map like a list (Enter, Tab, Shift+Tab); pasting indented text creates branches.
 
@@ -178,7 +179,7 @@ unzip paper-card.zip && cd paper-card
 # Push it to the empty repository you created on GitHub
 git init -b main
 git add -A
-git commit -m "Paper Cards v4.6"
+git commit -m "Paper Cards v4.7"
 git remote add origin https://github.com/your-username/repository-name.git
 git push -u origin main
 ```
@@ -251,6 +252,7 @@ Every save is a Git commit, so GitHub keeps the full history. You can also downl
 | `code/<log id>/` | Code uploaded to practice logs |
 | `materials/<course id>/<lesson id>/` | Slides and materials uploaded to each lesson of a course |
 | `data/terms.json` | The term library |
+| `data/texts/` | Text read from uploaded PDF, PPT and Word files (for linking terms) |
 | `uploads/` | Inserted images |
 
 ## What's in this repository
@@ -299,6 +301,7 @@ Main files:
 | `js/vault.mjs` | Token encryption |
 | `js/markdown.mjs` | Safe Markdown rendering |
 | `js/rich.mjs` | What-you-see-is-what-you-get edit boxes (bold, terms and images shown as they look) |
+| `js/doctext.mjs` | Reads the text of uploaded files and finds the terms they mention |
 
 ---
 

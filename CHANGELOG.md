@@ -3,6 +3,13 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.7 — 2026-11-02
+
+- **资料关联词库**：上传论文 PDF、课件（PDF / PPT / Word）或代码文件时，读出里面的文字，自动找出提到的词库术语（中文名、英文名都算，英文按整词匹配）。资料下方显示「提到的术语」和次数，指上去看解释；词库里每个术语的「出现在」也列出这些资料。匹配随词库实时更新，之后新加的术语也能在旧资料里找到。之前上传的资料在词库页点「读取」一次即可（已有的两篇论文 PDF 已经读好）。
+  **Files linked to the term library**: uploaded paper PDFs, slides (PDF / PPT / Word) and code files have their text read, and the library terms they mention (Chinese or English names; English as whole words) are found. Each file shows **Terms mentioned** with counts; each term's "appears in" list includes those files. Matching always uses the current library, so later terms are found in earlier files. Files uploaded before this version are read with one click on the Terms page.
+- 修复：编辑框里的术语指上去显示「词库里还没有这个词」。
+  Fixed: a term inside an edit box said it was not in the library.
+
 ## v4.6 — 2026-10-29
 
 - **精简界面**，去掉用不上的功能：间隔回顾（顶栏「回顾」、首页提醒、卡片页的回顾记录）；编辑页的「编辑 / 预览」切换；保存栏的「发现未标注的术语」提示。

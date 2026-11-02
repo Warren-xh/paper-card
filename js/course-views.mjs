@@ -91,7 +91,7 @@ export function createCourses(ctx) {
     return `<section class="section files-section"><div class="sec-head"><h2>课件与资料</h2><span class="muted small">${l.files.length} 个 · ${L.formatSize(total)}</span></div>
       ${others.length ? `<ul class="file-view">${others.map((f) => `<li><div class="file-row"><span class="fname" title="${h(C.materialName(f.path))}">${h(C.materialName(f.path))}</span><span class="muted small">${L.formatSize(f.size)}</span>
         ${C.isPdfFile(f.path) ? `<button type="button" class="btn quiet small" data-preview="${h(fileUrl(f.path))}" aria-expanded="false">预览</button><a class="btn quiet small" href="${h(fileUrl(f.path))}" target="_blank" rel="noopener">打开</a>` : ""}
-        <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(C.materialName(f.path))}">下载</a></div><div class="pdf-preview" hidden></div></li>`).join("")}</ul>` : ""}
+        <a class="btn quiet small" href="${h(fileUrl(f.path))}" download="${h(C.materialName(f.path))}">下载</a></div><div class="pdf-preview" hidden></div>${ctx.docTermsSlot(f.path)}</li>`).join("")}</ul>` : ""}
       ${images.length ? `<div class="material-images">${images.map((f) => `<a href="${h(fileUrl(f.path))}" target="_blank" rel="noopener" title="${h(C.materialName(f.path))}"><img src="${h(fileUrl(f.path))}" alt="${h(C.materialName(f.path))}" loading="lazy"><span>${h(C.materialName(f.path))}</span></a>`).join("")}</div>` : ""}
     </section>`;
   }
@@ -279,6 +279,7 @@ export function createCourses(ctx) {
       if (!b.classList.contains("video-start")) box.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     typesetMath(main);
+    ctx.fillDocTerms(main);
   }
 
 
@@ -682,9 +683,10 @@ export function createCourses(ctx) {
       try {
         const out = [];
         for (const { f, path } of chosen) out.push({ path, size: f.size, base64: await ctx.fileToBase64(f) });
+        const texts = await ctx.textFiles(chosen.map(({ f, path }) => ({ path, file: f })));
         await state.gh.commitLatest(async () => ({
           message: `上传课程资料 ${out.length} 个文件：` + (course.title + " · " + (form.title.value || "第 " + (index + 1) + " 课")).slice(0, 60),
-          files: out.map(({ path, base64 }) => ({ path, base64 })),
+          files: [...out.map(({ path, base64 }) => ({ path, base64 })), ...texts],
         }));
         for (const o of out) {
           uploadedPaths.add(o.path);

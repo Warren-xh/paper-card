@@ -15,8 +15,9 @@ import { createTerms } from "./terms-views.mjs";
 import * as PI from "./paperinfo.mjs";
 import * as R from "./reading.mjs";
 import { attachRich, fieldOf, setImageResolver } from "./rich.mjs";
+import * as D from "./doctext.mjs";
 
-export const VERSION = "4.6";
+export const VERSION = "4.7";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();
@@ -324,6 +325,94 @@ async function readData(path) {
     }
   }
   return fetchStatic(path);
+}
+
+/* ---------- terms inside uploaded files (doctext.mjs) ---------- */
+const fileTexts = new Map(); // path → Promise<text | null>
+function fileText(path) {
+  if (!fileTexts.has(path)) fileTexts.set(path, (async () => {
+    const kind = D.fileKind(path);
+    if (!kind) return null;
+    if (kind === "plain") {
+      const raw = state.gh?.unlocked
+        ? await state.gh.readText(path).catch(() => null)
+        : await fetch(path + "?v=" + Date.now(), { cache: "no-store" }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+      return raw == null ? null : D.normalizeText(raw);
+    }
+    const saved = await readData(D.textPath(path)).catch(() => null);
+    return typeof saved?.text === "string" ? saved.text : null;
+  })());
+  return fileTexts.get(path);
+}
+// Text saved by an upload in this session counts right away.
+function rememberTexts(files) {
+  for (const f of files) if (f.path.startsWith(D.TEXT_DIR)) {
+    try { const { path, text } = JSON.parse(f.text); fileTexts.set(path, Promise.resolve(text)); } catch {}
+  }
+}
+
+// Chips of the library terms a file mentions; filled in after the page shows.
+const docTermsSlot = (path) => (D.fileKind(path) ? `<div class="doc-terms" data-doc-terms="${h(path)}" hidden></div>` : "");
+async function fillDocTerms(root = main) {
+  const slots = $$("[data-doc-terms]", root);
+  if (!slots.length || !state.terms.terms.length) return;
+  await Promise.all(slots.map(async (el) => {
+    const found = D.termsInText(await fileText(el.dataset.docTerms), state.terms.terms);
+    if (!el.isConnected || !found.length) return;
+    el.innerHTML = `<span class="dt-label">提到的术语</span>` + found.slice(0, 40).map((f) =>
+      `<span class="term doc-term" tabindex="0" role="button" data-term="${h(f.entry.term)}" title="${h(f.context)}">${h(f.entry.term)}${f.count > 1 ? `<small>×${f.count}</small>` : ""}</span>`).join("") +
+      (found.length > 40 ? `<span class="muted small">还有 ${found.length - 40} 个</span>` : "");
+    el.hidden = false;
+  }));
+}
+
+// Every uploaded file that can hold text, with where it belongs.
+async function allMaterials() {
+  const out = [];
+  // The index only says whether a card has a PDF; its path is in the card itself.
+  for (const c of await Promise.all(state.index.cards.filter((x) => x.pdf).map((x) => getCard(x.id).catch(() => null))))
+    if (c?.pdf) out.push({ path: c.pdf, owner: c.title || "论文", href: "#/c/" + c.id });
+  for (const c of await courses.loadAll().catch(() => []))
+    c.lessons.forEach((l, i) => l.files.forEach((f) => out.push({ path: f.path, owner: (c.title || "课程") + " · " + (l.title || "第 " + (i + 1) + " 课"), href: "#/course/" + c.id + "/l/" + l.id })));
+  if (state.logs.logs.some((x) => x.files)) for (const l of await lab.loadAll().catch(() => []))
+    for (const f of l.files || []) out.push({ path: f.path, owner: l.title || "实操记录", href: "#/lab/e/" + l.id });
+  return out.filter((m) => D.fileKind(m.path));
+}
+
+// For the term library: in which files each term appears (keyed by the term's name).
+async function materialUsage(terms) {
+  const usage = new Map();
+  const mats = await allMaterials();
+  await Promise.all(mats.map(async (m) => {
+    for (const f of D.termsInText(await fileText(m.path), terms)) {
+      const k = f.entry.term;
+      if (!usage.has(k)) usage.set(k, []);
+      usage.get(k).push({ kind: "file", title: m.path.split("/").pop(), sub: m.owner, href: m.href, count: f.count });
+    }
+  }));
+  const missing = [];
+  for (const m of mats) if (D.needsSavedText(m.path) && (await fileText(m.path)) == null) missing.push(m);
+  return { usage, missing };
+}
+
+// Reads the text of files uploaded before this feature (or by another device) and saves it.
+async function scanMaterials(list, progress) {
+  if (!(await ensureUnlocked())) return 0;
+  const files = [];
+  for (const [i, m] of list.entries()) {
+    progress?.(i + 1, list.length);
+    try {
+      const res = await fetch(m.path, { cache: "no-store" });
+      if (!res.ok) continue;
+      files.push(...(await D.textFiles([{ path: m.path, file: await res.blob() }])));
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+  if (!files.length) return 0;
+  await state.gh.commitLatest(async () => ({ message: `读取资料里的文字 ${files.length} 份（用于词库关联）`, files }));
+  rememberTexts(files);
+  return files.length;
 }
 
 async function loadSite() {
@@ -636,6 +725,7 @@ const lab = createLab({
   lock: (expired) => lock(expired),
   route: () => route(),
   plainEnter, wrapSelection, fileToBase64, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file), enableImages, usedImages, mdTools, imageButton,
+  docTermsSlot, fillDocTerms, textFiles: async (items) => { const files = await D.textFiles(items); rememberTexts(files); return files; },
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
   setLeave: (fn) => { leaveEditor = fn; },
@@ -648,6 +738,7 @@ const courses = createCourses({
   lock: (expired) => lock(expired),
   route: () => route(),
   plainEnter, wrapSelection, fileToBase64, growBox, sortSelect, shrinkImage: (file) => shrinkImage(file), enableImages, usedImages, mdTools, imageButton,
+  docTermsSlot, fillDocTerms, textFiles: async (items) => { const files = await D.textFiles(items); rememberTexts(files); return files; },
   setDirty: (dirty) => { editorDirty = dirty; },
   isDirty: () => editorDirty,
   setLeave: (fn) => { leaveEditor = fn; },
@@ -671,6 +762,7 @@ const terms = createTerms({
   ensureUnlocked: () => ensureUnlocked(),
   lock: (expired) => lock(expired),
   loadCourseFiles: () => courses.loadAll(),
+  materialUsage, scanMaterials,
 });
 
 const palette = createPalette({
@@ -888,7 +980,7 @@ function headHtml(c) {
   return `<header class="card-head"><div class="meta-line">${meta.join("")}</div>
     <h1 class="card-title">${c.title ? h(c.title) : '<span class="untitled">未写标题</span>'}</h1>
     ${cite || c.link ? `<p class="cite">${h(cite)}${c.link ? `${cite ? " · " : ""}<a href="${h(M.paperHref(c.link))}" target="_blank" rel="noopener">${h(linkLabel(c.link))}</a>` : ""}</p>` : ""}</header>
-    ${c.pdf ? `<div class="pdf-block"><p class="pdf-line"><button type="button" class="btn small" data-preview="${h(c.pdf)}" aria-expanded="false">预览</button><a class="btn small" href="${h(c.pdf)}" download="${h(pdfName(c))}">下载论文 PDF</a><a class="small" href="${h(c.pdf)}" target="_blank" rel="noopener">在新标签页打开</a></p><div class="pdf-preview" hidden></div></div>` : ""}
+    ${c.pdf ? `<div class="pdf-block"><p class="pdf-line"><button type="button" class="btn small" data-preview="${h(c.pdf)}" aria-expanded="false">预览</button><a class="btn small" href="${h(c.pdf)}" download="${h(pdfName(c))}">下载论文 PDF</a><a class="small" href="${h(c.pdf)}" target="_blank" rel="noopener">在新标签页打开</a></p><div class="pdf-preview" hidden></div>${docTermsSlot(c.pdf)}</div>` : ""}
     ${c.why ? `<p class="why"><b>为什么读：</b>${h(c.why)}</p>` : ""}`;
 }
 
@@ -938,6 +1030,7 @@ async function cardView(id) {
   $("#copyMd").onclick = () => copyText(M.cardToMarkdown(c, titles));
   $$("[data-goto-tag]").forEach((a) => (a.onclick = () => { state.filter = { ...state.filter, query: "", tag: a.dataset.gotoTag, project: "", status: "" }; }));
   typesetMath(main);
+  fillDocTerms(main);
 }
 
 /* ---------- editor ---------- */
@@ -1334,7 +1427,9 @@ async function editView(id) {
     try {
       const path = M.pdfPath(isNew ? M.makeId(form.readDate.value || M.todayISO(), form.title.value || file.name.replace(/\.pdf$/i, "")) : id);
       const base64 = await fileToBase64(file);
-      await state.gh.commitLatest(async () => ({ message: "上传论文 PDF：" + file.name.slice(0, 80), files: [{ path, base64 }] }));
+      const texts = await D.textFiles([{ path, file }]);
+      await state.gh.commitLatest(async () => ({ message: "上传论文 PDF：" + file.name.slice(0, 80), files: [{ path, base64 }, ...texts] }));
+      rememberTexts(texts);
       uploadedPdfs.add(path);
       pdf = path;
       pdfLabel = file.name;

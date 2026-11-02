@@ -14,6 +14,9 @@ export function setLang(lang) {
 
 /* ---------- exact strings ---------- */
 const EXACT = {
+  // v4.7: library terms found inside uploaded files.
+  "资料": "File", "提到的术语": "Terms mentioned", "读取": "Read",
+  "没有读到文字（可能是扫描版 PDF）。": "No text found (it may be a scanned PDF).",
   // v4.5: course lessons written one entry at a time, exercises.
   "原来的笔记已按行拆成一条一条的记录，检查一下，保存后生效。": "Your earlier notes were split into one entry per line. Check them; this takes effect when you save.",
   "一条一条记：选一个符号，填上视频时间（可以不填），写几个字，回车就记下一条。时间会沿用上一条，翻到哪里改哪里。觉得没弄懂就勾上「待解决」，它会出现在下面的「问题与解答」里。": "One entry at a time: pick a symbol, add the video time (optional), write a few words and press Enter. The time carries over from the last entry; change it as you go. Tick “Open” for anything you didn't get, and it appears under “Questions & answers” below.",
@@ -329,6 +332,12 @@ const plural = (n, one, many) => `${n} ${+n === 1 ? one : many}`;
 // user's own words); rules call T() on the parts that are interface text.
 const T = (c) => (c && isCJK.test(c) ? tr(c) ?? c : c);
 const TEMPLATES = [
+  [/^有 (\d+) 份资料（PDF、PPT、Word）还没读取文字，读取后才能找到里面提到的术语。$/, (n) => `${plural(n, "file", "files")} (PDF, PPT, Word) not read yet; read them to find the terms they mention.`],
+  [/^正在读取 (\d+) \/ (\d+)…$/, (a, b) => `Reading ${a} / ${b}…`],
+  [/^已读取 (\d+) 份资料。$/, (n) => `Read ${plural(n, "file", "files")}.`],
+  [/^读取失败：(.*)$/, (m) => "Reading failed: " + m],
+  [/^还有 (\d+) 个$/, (n) => `${n} more`],
+  [/^×(\d+)$/, (n) => "×" + n],
   [/^(\d+) 条都解决了。$/, (n) => `All ${n} solved.`],
   [/^(\d+) 条记录$/, (n) => plural(n, "entry", "entries")],
   [/^(\d+) 条记录 · 待解决 (\d+)$/, (n, o) => `${plural(n, "entry", "entries")} · ${o} open`],
