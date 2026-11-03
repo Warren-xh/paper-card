@@ -288,6 +288,13 @@
      "text": "Linear Attention 明天跟着 ai 走一遍",
      "solve": false,
      "answer": ""
+    },
+    {
+     "time": "",
+     "type": "?",
+     "text": "pretraining-> 看到 104 页 data",
+     "solve": false,
+     "answer": ""
     }
    ],
    "practice": "",
@@ -296,5 +303,5 @@
   }
  ],
  "createdAt": "2026-10-27T17:59:36.874Z",
- "updatedAt": "2026-11-03T17:46:00.600Z"
+ "updatedAt": "2026-11-03T17:50:26.374Z"
 }
