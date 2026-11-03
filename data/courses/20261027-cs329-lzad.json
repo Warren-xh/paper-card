@@ -252,8 +252,49 @@
    "practice": "",
    "notes": "",
    "files": []
+  },
+  {
+   "id": "q053p4kj",
+   "title": "LLMs for Builders",
+   "link": "",
+   "date": "2026-11-03",
+   "done": false,
+   "oneLine": "",
+   "marks": [
+    {
+     "time": "",
+     "type": "✎",
+     "text": "LLM Engineer-> LLM adaptation -> LLM Application",
+     "solve": true,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "![截图](uploads/2026-11/20261103-4af8hm.webp)这是一个长度为 t 的 token，也就是上文。整句话的联动概率为每一步的条件概率相乘：已知前面所有词，下一个词恰好是这个词的概率有多大。 这个 P 则是 language model",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Architecture, [[Decoder-only Transformer]]，首先输入一条句子 The class was about, 接着模型会将每个 token 转换成一个向量,例如 X the = [0.2, 0.5, 0.8, 0.1 ]. 根据不同的模型，向量维度可能是几百或者几千。 接着生成 QKV， Query 查询，Key 键， Value 值向量，它们会对输入向量进行不同的线性变换，分别乘以设定好的权重矩阵S=Qkt,得到的分数越高，表示与对应 key 的匹配程度越高。 Scale+ Softmax ![截图](uploads/2026-11/20261103-j0ms3d.webp)  当向量维度很高的时候，Q 和 K 的点积可能变得很大，导致输出过于极端，影响梯度训练，因此需要缩放。 得到权重以后，乘以 Value，得到 self-attention 的值，这个向量值融合了整个句子的信息。 然后还要将这个输出向量，进过 W0 进行一次线性变换。 普通的 Attention 只有一组 QKV，学习一种注意力模式。而Multi-head 会同时使用多个不同的注意力头。不同的头可以关注不同的内容，比如语法，语义关系，上下文，其他关联等，接着用一个 concat 拼接所有 head 的输出 ![截图](uploads/2026-11/20261103-nc2x53.webp) ，h 表示 head 的数量。在语言中，一个注意里头可能不足以捕捉不同类型的信息，多个 head 可以从不同的表示子空间学习不同的关联模式。也不能只使用 Attention 计算出来的新信息，还要保留原始输入的信息，得到一个残差连接值Y=X+A，因为在计算Attention的时候可能会改变原始信息，残差连接让原始输入能够传递到后面的网络层，有助于深层网络的梯度传播和训练稳定。最后还要 Layer Normalization 层化归一处理 ![截图](uploads/2026-11/20261103-e06954.webp) 对每个 token 的特征维度进行标准化。",
+     "solve": true,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "✎",
+     "text": "Linear Attention 明天跟着 ai 走一遍",
+     "solve": false,
+     "answer": ""
+    }
+   ],
+   "practice": "",
+   "notes": "",
+   "files": []
   }
  ],
  "createdAt": "2026-10-27T17:59:36.874Z",
- "updatedAt": "2026-10-29T17:06:07.609Z"
+ "updatedAt": "2026-11-03T17:46:00.600Z"
 }
