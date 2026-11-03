@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-11-03T15:21:29.975Z",
+ "updatedAt": "2026-11-03T15:42:19.968Z",
  "terms": [
   {
    "term": "过拟合",
@@ -145,6 +145,14 @@
    "def": "一步一步地思考，利用更多的测试时计算，把困难任务分解成更小更简单的步骤",
    "createdAt": "2026-10-29T17:16:36.300Z",
    "updatedAt": "2026-10-29T17:16:36.300Z"
+  },
+  {
+   "term": "Decoder-only Transformer",
+   "zh": "仅编码器Transformer",
+   "en": "",
+   "def": "仅保留了解码器部分的 Transformer，适合做自回归任务，根据前词预测后词，也就是 sampling 的过程",
+   "createdAt": "2026-11-03T15:42:19.968Z",
+   "updatedAt": "2026-11-03T15:42:19.968Z"
   },
   {
    "term": "Discriminative",
