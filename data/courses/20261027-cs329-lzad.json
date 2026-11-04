@@ -292,16 +292,30 @@
     {
      "time": "",
      "type": "?",
-     "text": "pretraining-> 看到 104 页 data",
+     "text": "pretraining-> posttraining-> speculative Decoding",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "?",
+     "text": "[[Speculative Decoding]] for accessarate",
+     "solve": false,
+     "answer": ""
+    },
+    {
+     "time": "",
+     "type": "?",
+     "text": "[[Constrained Decoding]] 用于快速得到用于查询的文本",
      "solve": false,
      "answer": ""
     }
    ],
-   "practice": "",
+   "practice": "为什么在上下文末尾追加内容、而不改动前面的 token，能省钱又省时\n大模型在读取输入的时候，会计算一份 KV 缓存，每个 token 依赖它前面的所有 token\n如果只改末尾追加，前缀的缓存就可以直接拿来用，只需要计算新加的那一小段\n如果改了前面的某个 toekn，则那个位置往后的全部作废\n\n做推文分类会选什么温度，要不要用约束解码？\n设成接近 0，分类需要的是稳定可重复，同一条推文每次得到同一个表情\n温度高的话模型会发挥创意，不能保证每一次都一样\n建议用约束解码，不会输出拼错的标签和多余的解释。",
    "notes": "",
    "files": []
   }
  ],
  "createdAt": "2026-10-27T17:59:36.874Z",
- "updatedAt": "2026-11-03T17:50:26.374Z"
+ "updatedAt": "2026-11-04T15:34:51.078Z"
 }
