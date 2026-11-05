@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-11-04T17:30:25.544Z",
+ "updatedAt": "2026-11-05T17:22:48.089Z",
  "terms": [
   {
    "term": "过拟合",
@@ -145,6 +145,14 @@
    "def": "是一个评估工具增强型 LLM 的基准 benchmark。\n包含 53 个常用 API 工具，一套完整的工具增强 LLM 工具流。\n先通过一个 API 引擎找到要调用的 API，在对应文档发起调用。",
    "createdAt": "2026-11-02T15:17:01.509Z",
    "updatedAt": "2026-11-02T15:17:01.509Z"
+  },
+  {
+   "term": "BERT",
+   "zh": "",
+   "en": "Bidirectional Encoder Representations from Transformers",
+   "def": "",
+   "createdAt": "2026-11-05T17:22:48.089Z",
+   "updatedAt": "2026-11-05T17:22:48.089Z"
   },
   {
    "term": "CoH",
