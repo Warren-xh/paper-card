@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-11-05T17:22:48.089Z",
+ "updatedAt": "2026-11-05T17:27:19.737Z",
  "terms": [
   {
    "term": "过拟合",
@@ -150,9 +150,9 @@
    "term": "BERT",
    "zh": "",
    "en": "Bidirectional Encoder Representations from Transformers",
-   "def": "",
+   "def": "是一个预训练模型，在海量文本上做完形填空，学会理解上下文意思，之后稍加微调就能用到 分类，问答，识别等很多 NLP 任务",
    "createdAt": "2026-11-05T17:22:48.089Z",
-   "updatedAt": "2026-11-05T17:22:48.089Z"
+   "updatedAt": "2026-11-05T17:27:19.737Z"
   },
   {
    "term": "CoH",
