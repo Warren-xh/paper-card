@@ -17,7 +17,7 @@ import * as R from "./reading.mjs";
 import { attachRich, fieldOf, setImageResolver } from "./rich.mjs";
 import * as D from "./doctext.mjs";
 
-export const VERSION = "4.7";
+export const VERSION = "4.8";
 const PROJECT_URL = "https://github.com/Warren-xh/paper-card";
 // Interface language: Chinese by default; English swaps interface text as it appears.
 const T = startTranslation();

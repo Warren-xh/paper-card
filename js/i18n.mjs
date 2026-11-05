@@ -14,6 +14,9 @@ export function setLang(lang) {
 
 /* ---------- exact strings ---------- */
 const EXACT = {
+  // v4.8: looking up the term library from the top bar.
+  "查词库": "Look up a term", "词库里的词": "Terms in the library", "术语": "Term",
+  "在词库中打开 →": "Open in the term library →", "最近查过": "Recently looked up", "＋ 加入词库": "+ Add to the library", "关闭（Esc）": "Close (Esc)",
   // v4.7: library terms found inside uploaded files.
   "资料": "File", "提到的术语": "Terms mentioned", "读取": "Read",
   "没有读到文字（可能是扫描版 PDF）。": "No text found (it may be a scanned PDF).",
@@ -332,6 +335,7 @@ const plural = (n, one, many) => `${n} ${+n === 1 ? one : many}`;
 // user's own words); rules call T() on the parts that are interface text.
 const T = (c) => (c && isCJK.test(c) ? tr(c) ?? c : c);
 const TEMPLATES = [
+  [/^词库里没有「(.+)」$/, (q) => `“${q}” is not in the library`],
   [/^有 (\d+) 份资料（PDF、PPT、Word）还没读取文字，读取后才能找到里面提到的术语。$/, (n) => `${plural(n, "file", "files")} (PDF, PPT, Word) not read yet; read them to find the terms they mention.`],
   [/^正在读取 (\d+) \/ (\d+)…$/, (a, b) => `Reading ${a} / ${b}…`],
   [/^已读取 (\d+) 份资料。$/, (n) => `Read ${plural(n, "file", "files")}.`],

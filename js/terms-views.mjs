@@ -333,5 +333,114 @@ export function createTerms(ctx) {
     }
   }
 
+  /* ---------- 查词库: the lookup box in the top bar ---------- */
+  // Picking a term never leaves the page: it opens a floating card that stays
+  // while you keep reading, with the terms looked up recently.
+  const look = $("#termLook");
+  const lookInput = $("#termLookInput");
+  const lookList = $("#termLookList");
+  const lookBtn = $("#termLookBtn");
+  let hits = [];
+  let active = -1;
+  const recent = [];
+
+  const card = Object.assign(document.createElement("aside"), { className: "term-float", hidden: true });
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-label", "术语");
+  document.body.append(card);
+
+  function showCard(t) {
+    const k = T.termKey(t.term);
+    const i = recent.findIndex((x) => T.termKey(x) === k);
+    if (i >= 0) recent.splice(i, 1);
+    recent.unshift(t.term);
+    recent.length = Math.min(recent.length, 6);
+    const others = recent.slice(1).map((name) => T.findTerm(state.terms, name)).filter(Boolean);
+    card.innerHTML = `
+      <div class="tf-head"><b>${h(t.term)}</b><button type="button" class="icon-btn tf-close" aria-label="关闭" title="关闭（Esc）"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      ${t.zh || t.en ? `<dl class="tp-names">${t.zh ? `<dt>中文</dt><dd>${h(t.zh)}</dd>` : ""}${t.en ? `<dt>English</dt><dd>${h(t.en)}</dd>` : ""}</dl>` : ""}
+      <div class="tf-body">${t.def ? `<div class="md tp-def">${renderMarkdown(t.def)}</div>` : `<p class="muted small">还没有写解释。</p>`}</div>
+      <div class="tf-foot"><a class="tp-link" href="#/terms/${encodeURIComponent(t.term)}">在词库中打开 →</a><button type="button" class="btn quiet small" data-tf-edit>编辑</button></div>
+      ${others.length ? `<div class="tf-recent"><span>最近查过</span>${others.map((o) => `<button type="button" data-tf-term="${h(o.term)}">${h(o.term)}</button>`).join("")}</div>` : ""}`;
+    card.hidden = false;
+    card.dataset.term = t.term;
+    ctx.typesetMath(card);
+  }
+  const closeCard = () => { card.hidden = true; };
+  card.addEventListener("click", async (e) => {
+    if (e.target.closest(".tf-close")) return closeCard();
+    const again = e.target.closest("[data-tf-term]");
+    if (again) { const t = T.findTerm(state.terms, again.dataset.tfTerm); if (t) showCard(t); return; }
+    if (e.target.closest("[data-tf-edit]")) {
+      const known = T.findTerm(state.terms, card.dataset.term);
+      const res = await editor({ ...known });
+      if (res && (await saveTerm(res.entry, res.was))) showCard(T.findTerm(state.terms, res.entry.term) || res.entry);
+    }
+    if (e.target.closest(".tp-link")) closeCard();
+  });
+
+  const openLook = () => { look.classList.add("open"); lookBtn.setAttribute("aria-expanded", "true"); lookInput.focus(); lookInput.select(); paintHits(); };
+  const closeLook = () => {
+    look.classList.remove("open");
+    lookBtn.setAttribute("aria-expanded", "false");
+    lookList.hidden = true;
+    lookInput.setAttribute("aria-expanded", "false");
+  };
+  function paintHits() {
+    const q = lookInput.value.trim();
+    if (!q) { hits = []; lookList.hidden = true; lookInput.setAttribute("aria-expanded", "false"); return; }
+    hits = T.searchTerms(state.terms.terms, q).slice(0, 8);
+    const exact = state.terms.terms.some((t) => [t.term, t.zh, t.en].some((n) => n && T.termKey(n) === T.termKey(q)));
+    active = hits.length ? 0 : -1;
+    lookList.innerHTML = hits.map((t, i) => `<li role="option" id="tl-${i}" data-i="${i}"${i === active ? ' aria-selected="true"' : ""}><b>${h(t.term)}</b>${t.zh || t.en ? `<small>${h([t.zh, t.en].filter((n) => n && n !== t.term).join(" · "))}</small>` : ""}${t.def ? `<span class="tl-def">${h(t.def.replace(/\s+/g, " ").slice(0, 60))}</span>` : ""}</li>`).join("") +
+      (exact ? "" : `<li role="option" class="tl-add" data-add="1">${hits.length ? "" : `<span class="muted">词库里没有「${h(q)}」</span>`}<b>＋ 加入词库</b></li>`);
+    lookList.hidden = false;
+    lookInput.setAttribute("aria-expanded", "true");
+    lookInput.setAttribute("aria-activedescendant", active >= 0 ? "tl-" + active : "");
+  }
+  const moveActive = (d) => {
+    if (!hits.length) return;
+    active = (active + d + hits.length) % hits.length;
+    $$("[data-i]", lookList).forEach((li) => li.toggleAttribute("aria-selected", +li.dataset.i === active));
+    lookInput.setAttribute("aria-activedescendant", "tl-" + active);
+    $(`[data-i="${active}"]`, lookList)?.scrollIntoView({ block: "nearest" });
+  };
+  async function pick(i) {
+    if (i === "add") {
+      const name = lookInput.value.trim();
+      closeLook();
+      const res = await editor({ term: name });
+      if (res && (await saveTerm(res.entry, res.was))) showCard(T.findTerm(state.terms, res.entry.term) || res.entry);
+      return;
+    }
+    const t = hits[i];
+    if (!t) return;
+    lookInput.value = "";
+    closeLook();
+    lookInput.blur();
+    showCard(t);
+  }
+  lookBtn.addEventListener("click", () => (look.classList.contains("open") ? closeLook() : openLook()));
+  lookInput.addEventListener("focus", () => { if (lookInput.value.trim()) paintHits(); });
+  lookInput.addEventListener("input", paintHits);
+  lookInput.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); moveActive(e.key === "ArrowDown" ? 1 : -1); }
+    else if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) {
+      e.preventDefault();
+      if (active >= 0) pick(active);
+      else if (lookInput.value.trim()) pick("add");
+    } else if (e.key === "Escape") { e.stopPropagation(); lookInput.value = ""; closeLook(); lookInput.blur(); }
+  });
+  // Choosing with the mouse must not blur the box first.
+  lookList.addEventListener("pointerdown", (e) => e.preventDefault());
+  lookList.addEventListener("click", (e) => {
+    const li = e.target.closest("li");
+    if (li) pick(li.dataset.add ? "add" : +li.dataset.i);
+  });
+  document.addEventListener("pointerdown", (e) => { if (!look.contains(e.target)) closeLook(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !card.hidden && !document.querySelector("dialog[open]")) closeCard();
+  });
+
   return { loadTerms, page, markSelection, autoMark, toMarkdown: () => T.libraryToMarkdown(state.terms) };
 }

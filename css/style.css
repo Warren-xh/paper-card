@@ -1011,3 +1011,45 @@ dialog:has(.paper-picks) { width: min(640px, calc(100vw - 32px)); }
 .doc-terms .doc-term { padding: 1px 8px; border-radius: var(--r-pill); text-decoration: none; border: 1px solid color-mix(in srgb, var(--c-term) 30%, transparent); }
 .doc-terms .doc-term small { margin-left: 3px; color: var(--pencil); font-size: 11px; }
 .tc-used small { font-weight: 400; }
+/* ---------- 查词库: lookup box in the top bar and the floating term card ---------- */
+.tl { position: relative; flex: none; }
+.tl-btn { display: none; }
+.tl-box { position: relative; display: flex; align-items: center; }
+.tl-icon { position: absolute; left: 9px; width: 16px; height: 16px; fill: none; stroke: var(--c-term); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.tl-box input { width: 136px; height: 32px; padding: 0 10px 0 31px; border: 1px solid var(--rule); border-radius: var(--r-pill); background: var(--page); color: var(--ink); font-size: 14px; outline: none; transition: width var(--t) var(--ease), border-color var(--t), box-shadow var(--t); }
+.tl-box input:focus { width: 210px; border-color: var(--c-term); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-term) 16%, transparent); }
+.tl-box input::-webkit-search-cancel-button { display: none; }
+.tl-list { position: absolute; top: calc(100% + 6px); right: 0; z-index: 40; width: min(340px, calc(100vw - 24px)); max-height: min(60vh, 420px); overflow-y: auto; margin: 0; padding: 4px; list-style: none; background: var(--page); border: 1px solid color-mix(in srgb, var(--c-term) 30%, var(--rule)); border-radius: var(--r-md); box-shadow: var(--shadow-2); }
+.tl-list li { display: grid; gap: 1px; padding: 7px 10px; border-radius: var(--r-sm); cursor: pointer; font-size: 14px; }
+.tl-list li small { color: var(--ink-2); font-size: 12.5px; }
+.tl-list .tl-def { color: var(--pencil); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-list li[aria-selected], .tl-list li:hover { background: color-mix(in srgb, var(--c-term) 10%, var(--page)); }
+.tl-list .tl-add b { color: var(--c-term); font-weight: 600; }
+/* Narrower screens: an icon that opens the box below the top bar. */
+@media (max-width: 1100px) {
+  .tl-btn { display: grid; color: var(--c-term); }
+  .tl.open .tl-btn { background: color-mix(in srgb, var(--c-term) 12%, transparent); }
+  .tl-box { display: none; }
+  .tl.open .tl-box { display: flex; position: fixed; top: 58px; right: max(12px, calc((100vw - var(--page-w)) / 2 + 16px)); width: min(360px, calc(100vw - 24px)); z-index: 40; }
+  .tl.open .tl-box input, .tl.open .tl-box input:focus { width: 100%; height: 40px; font-size: 16px; box-shadow: var(--shadow-2), 0 0 0 3px color-mix(in srgb, var(--c-term) 16%, transparent); border-color: var(--c-term); }
+  .tl.open .tl-icon { left: 11px; }
+  .tl-list { width: 100%; }
+}
+@media (max-width: 440px) { .tl.open .tl-box { top: 52px; } }
+
+.term-float { position: fixed; right: 20px; bottom: 20px; z-index: 60; width: min(360px, calc(100vw - 24px)); max-height: min(70vh, 520px); display: flex; flex-direction: column; background: var(--page); color: var(--ink); border: 1px solid color-mix(in srgb, var(--c-term) 35%, var(--rule)); border-radius: var(--r-md); box-shadow: inset 4px 0 0 var(--c-term), var(--shadow-2); padding: 10px 12px 10px 18px; font-size: 14.5px; line-height: 1.55; animation: rise 0.16s var(--ease); }
+.tf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.tf-head b { font-family: var(--serif); font-size: 18px; }
+.tf-close { width: 30px; height: 30px; margin-right: -4px; }
+.tf-body { overflow-y: auto; min-height: 0; }
+.tf-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.tf-foot .tp-link { margin-top: 0; }
+.tf-recent { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--rule); font-size: 12.5px; color: var(--pencil); }
+.tf-recent button { border: 1px solid color-mix(in srgb, var(--c-term) 30%, var(--rule)); background: none; color: var(--c-term); border-radius: var(--r-pill); padding: 1px 9px; font-size: 12.5px; cursor: pointer; }
+.tf-recent button:hover { background: color-mix(in srgb, var(--c-term) 10%, var(--page)); }
+@media (max-width: 640px) {
+  .term-float { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 55vh; }
+}
+@media print { .tl, .term-float { display: none !important; } }
+/* Keep the editor's save bar uncovered. */
+body:has(.editor-bar) .term-float { bottom: 88px; }

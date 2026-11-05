@@ -3,6 +3,11 @@
 每个版本的完整网站压缩包在 [Releases](https://github.com/Warren-xh/paper-card/releases) 和 [`backup/`](backup/) 里。
 Release packages of every version are on [Releases](https://github.com/Warren-xh/paper-card/releases) and in [`backup/`](backup/).
 
+## v4.8 — 2026-11-05
+
+- 顶栏新增**查词库**：输入中文、英文或解释里的字，下拉列出匹配的术语，可以用 ↑ ↓ 和回车选。选中后不跳转页面，术语卡片浮在右下角（手机上是底部卡片），换页也留着，可以点「最近查过」来回切换、直接编辑，Esc 或 × 关闭。查不到的词可以当场加入词库。窄屏上是一个书本图标，点开再输入。
+  **Look up a term** in the top bar: type Chinese, English or words from an explanation and pick from the list (↑ ↓ Enter). The page stays put: the term card floats in the bottom right (a bottom sheet on phones), stays across pages, lists recent lookups and can be edited; Esc or × closes it. A word not found can be added on the spot. On narrow screens it is a book icon.
+
 ## v4.7 — 2026-11-02
 
 - **资料关联词库**：上传论文 PDF、课件（PDF / PPT / Word）或代码文件时，读出里面的文字，自动找出提到的词库术语（中文名、英文名都算，英文按整词匹配）。资料下方显示「提到的术语」和次数，指上去看解释；词库里每个术语的「出现在」也列出这些资料。匹配随词库实时更新，之后新加的术语也能在旧资料里找到。之前上传的资料在词库页点「读取」一次即可（已有的两篇论文 PDF 已经读好）。
