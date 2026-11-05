@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "20261104-trasnformer-r8jq",
+  "title": "Trasnformer 就是 RNN ：用线性注意力实现快速自回归 Transformer",
+  "authors": "",
+  "year": 2020,
+  "venue": "",
+  "link": "https://arxiv.org/abs/2006.16236",
+  "pdf": "",
+  "pdfName": "",
+  "tags": [],
+  "project": "",
+  "readDate": "2026-11-04",
+  "status": "reading",
+  "doneAt": "",
+  "why": "了解线性注意力是什么",
+  "marks": [
+    {
+      "type": "✎",
+      "page": "",
+      "text": "线性 Transformer 旨在 减低内存占用，并对上下文长度进行线性拓展",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "当时已经有很多工作，通过权重，蒸馏，替换等方法提升内存效率，纵使他们确实有效果，但是根本来说，时间复杂度仍是二次的，难以拓展到长序列。",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "[[自注意力]]，本文证明用自回归目标训练的自注意力层可以看作一个循环神经网络",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "[[线性化]] 一直是训练类别数很多的分类模型瓶颈。 每个 Transformer 都可以看作 RNN",
+      "answer": "",
+      "solve": false
+    }
+  ],
+  "solved": "",
+  "oneLine": "2020 年模型的优化过程，含大量公式目前还看不太懂",
+  "pain": "",
+  "idea": "",
+  "proof": {
+    "datasets": "",
+    "baselines": "",
+    "numbers": ""
+  },
+  "doubts": "",
+  "relevance": "",
+  "links": [],
+  "linkNote": "",
+  "notes": "",
+  "srs": null,
+  "reviews": [],
+  "createdAt": "2026-11-05T16:27:24.314Z",
+  "updatedAt": "2026-11-05T16:27:24.314Z"
+}
