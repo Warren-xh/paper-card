@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "20261105-colbert-2mne",
+  "title": "ColBERT：基于 BERT 上下文化后期交互的高效段落检索",
+  "authors": "",
+  "year": 2020,
+  "venue": "",
+  "link": "https://arxiv.org/abs/2004.12832",
+  "pdf": "",
+  "pdfName": "",
+  "tags": [],
+  "project": "",
+  "readDate": "2026-11-05",
+  "status": "reading",
+  "doneAt": "",
+  "why": "如何在效果接近的前提下提升编码器的速度",
+  "marks": [
+    {
+      "type": "✎",
+      "page": "",
+      "text": "ColBERT 是一个基于 [[BERT]] 的上下文化后期交互的排序模型",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "在后期交互中，查询 q 和 文档 d 被分别编码成两组上下文嵌入，相关性用两组便于[[剪枝|NN Pruning]]的计算来评估，所以能在不穷举评估每个候选的情况下完成排序的快速计算",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "通过保留但审慎地推迟查询-文档交互，可以吧交互型模型的[[细粒度匹配]]和表示型模型的文本表示与计算集合起来",
+      "answer": "",
+      "solve": false
+    },
+    {
+      "type": "✎",
+      "page": "",
+      "text": "看到相关工作",
+      "answer": "",
+      "solve": false
+    }
+  ],
+  "solved": "",
+  "oneLine": "",
+  "pain": "",
+  "idea": "",
+  "proof": {
+    "datasets": "",
+    "baselines": "",
+    "numbers": ""
+  },
+  "doubts": "",
+  "relevance": "",
+  "links": [],
+  "linkNote": "",
+  "notes": "",
+  "srs": null,
+  "reviews": [],
+  "createdAt": "2026-11-05T17:38:10.853Z",
+  "updatedAt": "2026-11-05T17:38:10.853Z"
+}
