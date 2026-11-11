@@ -35,19 +35,12 @@
       "text": "通过保留但审慎地推迟查询-文档交互，可以吧交互型模型的[[细粒度匹配]]和表示型模型的文本表示与计算集合起来",
       "answer": "",
       "solve": false
-    },
-    {
-      "type": "✎",
-      "page": "",
-      "text": "看到相关工作",
-      "answer": "",
-      "solve": false
     }
   ],
   "solved": "",
   "oneLine": "",
   "pain": "",
-  "idea": "",
+  "idea": "构建一个上下文检索后期的思路",
   "proof": {
     "datasets": "",
     "baselines": "",
@@ -61,5 +54,5 @@
   "srs": null,
   "reviews": [],
   "createdAt": "2026-11-05T17:38:10.853Z",
-  "updatedAt": "2026-11-05T17:38:10.853Z"
+  "updatedAt": "2026-11-11T15:54:17.330Z"
 }
