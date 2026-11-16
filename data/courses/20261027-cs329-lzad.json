@@ -245,8 +245,8 @@
    "id": "l4197zbc",
    "title": "",
    "link": "",
-   "date": "",
-   "done": false,
+   "date": "2026-11-16",
+   "done": true,
    "oneLine": "",
    "marks": [],
    "practice": "",
@@ -317,5 +317,5 @@
   }
  ],
  "createdAt": "2026-10-27T17:59:36.874Z",
- "updatedAt": "2026-11-04T15:34:51.078Z"
+ "updatedAt": "2026-11-16T13:03:37.745Z"
 }
