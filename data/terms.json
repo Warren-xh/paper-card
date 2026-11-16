@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updatedAt": "2026-11-16T13:25:17.338Z",
+ "updatedAt": "2026-11-16T13:26:32.018Z",
  "terms": [
   {
    "term": "过拟合",
@@ -253,10 +253,10 @@
   {
    "term": "RAG",
    "zh": "检索增强生成",
-   "en": "Retrieval",
-   "def": "",
+   "en": "Retrieval-Augmented Generation",
+   "def": "先从外部知识库找出相关资料，再让大模型参考这些资料来回答，这样模型能用上它训练时候没见过的最新信息",
    "createdAt": "2026-11-16T13:25:17.338Z",
-   "updatedAt": "2026-11-16T13:25:17.338Z"
+   "updatedAt": "2026-11-16T13:26:32.018Z"
   },
   {
    "term": "ReAct",
